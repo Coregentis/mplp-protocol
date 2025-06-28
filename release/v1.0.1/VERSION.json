@@ -1,0 +1,9 @@
+{
+  "version": "v1.0.1",
+  "status": "frozen",
+  "releaseDate": "2025-06-29",
+  "commit": "<Insert Git commit hash (can be left empty)>",
+  "compatibleWith": [],
+  "deprecated": false,
+  "notes": "Fixed documentation links, added official contact information, no changes to protocol structure or schema content"
+}

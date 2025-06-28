@@ -1,0 +1,27 @@
+{
+  "learningId": "learn-20240601-001",
+  "relatedExecutionId": "exec-20240601-001",
+  "agentId": "agent-01",
+  "observations": [
+    "Result relevance low",
+    "Response time exceeded 5 seconds"
+  ],
+  "failureReason": "Inaccurate results due to broad query",
+  "adjustments": [
+    {
+      "target": "queryTemplate",
+      "changeType": "parameter",
+      "description": "Added keyword narrowing to improve precision"
+    },
+    {
+      "target": "searchTool",
+      "changeType": "strategy",
+      "description": "Switched to Arxiv-specific search plugin"
+    }
+  ],
+  "knowledge": {
+    "keywordsBoosted": ["reinforcement learning", "multi-agent"],
+    "excludedSources": ["non-peer-reviewed"]
+  },
+  "timestamp": "2025-06-28T10:25:00Z"
+}

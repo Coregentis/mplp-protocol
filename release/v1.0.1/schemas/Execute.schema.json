@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coregentis.org/schemas/v1.0/Execute.schema.json",
+  "version": "1.0.0",
+  "title": "MPLP.Execute Schema",
+  "description": "Schema for defining task execution behavior and tool/API invocation in multi-agent systems.",
+  "type": "object",
+  "properties": {
+    "executionId": {
+      "type": "string",
+      "description": "Unique identifier for the execution instance."
+    },
+    "taskId": {
+      "type": "string",
+      "description": "Reference to the task being executed."
+    },
+    "agentId": {
+      "type": "string",
+      "description": "Identifier of the agent performing the execution."
+    },
+    "startTime": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Start time of execution."
+    },
+    "endTime": {
+      "type": "string",
+      "format": "date-time",
+      "description": "End time of execution."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "running", "success", "failed"],
+      "description": "Current status of the execution."
+    },
+    "input": {
+      "type": "object",
+      "description": "Normalized input data for the task."
+    },
+    "output": {
+      "type": "object",
+      "description": "Resulting output data from the execution."
+    },
+    "tool": {
+      "type": "object",
+      "description": "Tool or API used during execution.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the tool/API."
+        },
+        "version": {
+          "type": "string",
+          "description": "Tool/API version."
+        },
+        "endpoint": {
+          "type": "string",
+          "description": "API endpoint or function reference."
+        }
+      },
+      "required": ["name"]
+    },
+    "error": {
+      "type": "string",
+      "description": "Optional error message if execution fails."
+    }
+  },
+  "required": ["executionId", "taskId", "agentId", "startTime", "status", "input", "tool"],
+  "additionalProperties": true
+}
