@@ -1,0 +1,22 @@
+{
+  "confirmId": "confirm-20240601-001",
+  "planId": "plan-20240601-001",
+  "confirmedBy": "user-01",
+  "confirmedAt": "2025-06-28T10:10:00Z",
+  "approvalStages": [
+    {
+      "stageId": "stage-01",
+      "approver": "user-01",
+      "status": "approved",
+      "comment": "Looks good to proceed",
+      "timestamp": "2025-06-28T10:11:00Z"
+    },
+    {
+      "stageId": "stage-02",
+      "approver": "agent-01",
+      "status": "pending",
+      "comment": "",
+      "timestamp": "2025-06-28T10:12:00Z"
+    }
+  ]
+}
