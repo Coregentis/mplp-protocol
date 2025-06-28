@@ -1,3 +1,4 @@
+# Development files and directories
 __pycache__/
 *.log
 *.tmp
@@ -6,4 +7,21 @@ dist/
 .env
 .idea/
 *.DS_Store
-dev/rules/project_rules.md
+
+# Development and internal files (should not be in public repo)
+dev/
+.trae/
+mplp-docs/
+scripts/
+package.json
+package-lock.json
+version-compatibility.json
+versions.json
+public/
+.pre-commit-config.yaml
+
+# GitHub workflows (development only)
+.github/
+
+# Only keep release directory and essential files
+# Everything else should be in a separate development repository
