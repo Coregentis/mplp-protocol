@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coregentis.org/schemas/v1.0/index.json",
+  "version": "1.0.0",
+  "description": "Index of all MPLP protocol JSON Schemas",
+  "type": "object",
+  "properties": {
+    "Context": {
+      "$ref": "https://coregentis.org/schemas/v1.0/Context.schema.json"
+    },
+    "Plan": {
+      "$ref": "https://coregentis.org/schemas/v1.0/Plan.schema.json"
+    },
+    "Confirm": {
+      "$ref": "https://coregentis.org/schemas/v1.0/Confirm.schema.json"
+    },
+    "Execute": {
+      "$ref": "https://coregentis.org/schemas/v1.0/Execute.schema.json"
+    },
+    "Learn": {
+      "$ref": "https://coregentis.org/schemas/v1.0/Learn.schema.json"
+    },
+    "Trace": {
+      "$ref": "https://coregentis.org/schemas/v1.0/Trace.schema.json"
+    },
+    "Test": {
+      "$ref": "https://coregentis.org/schemas/v1.0/Test.schema.json"
+    }
+  },
+  "required": ["Context", "Plan", "Confirm", "Execute", "Learn", "Trace", "Test"],
+  "additionalProperties": false
+}

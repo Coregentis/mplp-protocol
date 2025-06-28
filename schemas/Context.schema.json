@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coregentis.org/schemas/v1.0/Context.schema.json",
+  "version": "1.0.0",
+  "title": "MPLP.Context Schema",
+  "description": "Schema for the global shared context protocol in a multi-agent system.",
+  "type": "object",
+  "properties": {
+    "contextId": {
+      "type": "string",
+      "description": "A unique identifier for this context instance."
+    },
+    "projectName": {
+      "type": "string",
+      "description": "The name of the project associated with this context."
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the context was initialized."
+    },
+    "agentStates": {
+      "type": "array",
+      "description": "List of agent states active in the current context.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "agentId": {
+            "type": "string",
+            "description": "Unique identifier of the agent."
+          },
+          "role": {
+            "type": "string",
+            "description": "Role of the agent in the project."
+          },
+          "status": {
+            "type": "string",
+            "enum": ["idle", "active", "error", "completed"],
+            "description": "Current operational status of the agent."
+          }
+        },
+        "required": ["agentId", "role", "status"]
+      }
+    },
+    "memory": {
+      "type": "object",
+      "description": "Arbitrary shared memory or key-value data store.",
+      "additionalProperties": true
+    }
+  },
+  "required": ["contextId", "projectName", "createdAt", "agentStates"],
+  "additionalProperties": true
+}

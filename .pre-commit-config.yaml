@@ -1,0 +1,25 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-json
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.2.5
+    hooks:
+      - id: prettier
+        additional_dependencies: ["prettier-plugin-json"]
+        files: "\\.(json)$"
+
+  - repo: https://github.com/Julian/jsonschema
+    rev: 4.22.0
+    hooks:
+      - id: jsonschema-validate
+        name: jsonschema-validate
+        entry: python3 -m jsonschema.cli
+        language: system
+        types: [json]
+        args: ["--instance", "examples", "--schemafile", "schemas/index.json"]
+        pass_filenames: false
