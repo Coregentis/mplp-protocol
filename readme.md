@@ -1,6 +1,6 @@
-# Multi-Agent Project Lifecycle Protocol (MPLP)
-
 <div align="center">
+
+# Multi-Agent Project Lifecycle Protocol (MPLP)
 
 **🌐 The TCP/IP of Multi-Agent AI Collaboration**
 
