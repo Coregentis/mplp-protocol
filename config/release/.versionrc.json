@@ -1,0 +1,91 @@
+{
+  "types": [
+    {
+      "type": "feat",
+      "section": "Features",
+      "hidden": false
+    },
+    {
+      "type": "fix",
+      "section": "Bug Fixes",
+      "hidden": false
+    },
+    {
+      "type": "docs",
+      "section": "Documentation",
+      "hidden": false
+    },
+    {
+      "type": "style",
+      "section": "Styles",
+      "hidden": true
+    },
+    {
+      "type": "refactor",
+      "section": "Code Refactoring",
+      "hidden": false
+    },
+    {
+      "type": "perf",
+      "section": "Performance Improvements",
+      "hidden": false
+    },
+    {
+      "type": "test",
+      "section": "Tests",
+      "hidden": true
+    },
+    {
+      "type": "build",
+      "section": "Build System",
+      "hidden": true
+    },
+    {
+      "type": "ci",
+      "section": "Continuous Integration",
+      "hidden": true
+    },
+    {
+      "type": "chore",
+      "section": "Chores",
+      "hidden": true
+    },
+    {
+      "type": "revert",
+      "section": "Reverts",
+      "hidden": false
+    }
+  ],
+  "commitUrlFormat": "https://github.com/Multi-Agent-io/Multi_Agent_Project_Lifecycle_Protocol/commit/{{hash}}",
+  "compareUrlFormat": "https://github.com/Multi-Agent-io/Multi_Agent_Project_Lifecycle_Protocol/compare/{{previousTag}}...{{currentTag}}",
+  "issueUrlFormat": "https://github.com/Multi-Agent-io/Multi_Agent_Project_Lifecycle_Protocol/issues/{{id}}",
+  "userUrlFormat": "https://github.com/{{user}}",
+  "releaseCommitMessageFormat": "chore(release): {{currentTag}}",
+  "issuePrefixes": ["#"],
+  "header": "# Changelog\n\nAll notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.\n",
+  "packageFiles": [
+    {
+      "filename": "package.json",
+      "type": "json"
+    }
+  ],
+  "bumpFiles": [
+    {
+      "filename": "package.json",
+      "type": "json"
+    },
+    {
+      "filename": "versions.json",
+      "updater": "scripts/version-updater.js"
+    }
+  ],
+  "skip": {
+    "changelog": false,
+    "commit": false,
+    "tag": false
+  },
+  "scripts": {
+    "prerelease": "npm run test && npm run validate:examples && npm run check:frozen",
+    "postchangelog": "npm run generate:schema-docs && npm run sync:docs"
+  }
+}

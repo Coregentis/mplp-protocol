@@ -1,0 +1,354 @@
+name: Code Quality & Analysis
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # 每周一UTC时间01:00运行代码质量检查
+    - cron: '0 1 * * 1'
+
+jobs:
+  eslint:
+    name: ESLint Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Install ESLint
+      run: npm install --save-dev eslint @eslint/js
+      
+    - name: Create ESLint config
+      run: |
+        cat > .eslintrc.js << 'EOF'
+        module.exports = {
+          env: {
+            node: true,
+            es2021: true,
+            jest: true
+          },
+          extends: ['eslint:recommended'],
+          parserOptions: {
+            ecmaVersion: 'latest',
+            sourceType: 'module'
+          },
+          rules: {
+            'no-unused-vars': 'warn',
+            'no-console': 'off',
+            'prefer-const': 'error',
+            'no-var': 'error'
+          }
+        };
+        EOF
+        
+    - name: Run ESLint
+      run: |
+        npx eslint scripts/ tests/ --ext .js --format json --output-file eslint-report.json || true
+        npx eslint scripts/ tests/ --ext .js --format stylish
+        
+    - name: Upload ESLint report
+      uses: actions/upload-artifact@v3
+      with:
+        name: eslint-report
+        path: eslint-report.json
+        retention-days: 30
+
+  complexity:
+    name: Code Complexity Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Install complexity tools
+      run: npm install --save-dev complexity-report
+      
+    - name: Analyze code complexity
+      run: |
+        mkdir -p build/reports/complexity
+        
+        # 分析脚本复杂度
+        if [ -d "scripts" ]; then
+          find scripts -name "*.js" -exec npx cr --format json --output build/reports/complexity/scripts-complexity.json {} + || true
+          find scripts -name "*.js" -exec npx cr --format plain {} + > build/reports/complexity/scripts-complexity.txt || true
+        fi
+        
+        # 分析测试复杂度
+        if [ -d "tests" ]; then
+          find tests -name "*.js" -exec npx cr --format json --output build/reports/complexity/tests-complexity.json {} + || true
+          find tests -name "*.js" -exec npx cr --format plain {} + > build/reports/complexity/tests-complexity.txt || true
+        fi
+        
+    - name: Upload complexity reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: complexity-reports
+        path: build/reports/complexity/
+        retention-days: 30
+
+  duplication:
+    name: Code Duplication Detection
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Install jscpd
+      run: npm install --save-dev jscpd
+      
+    - name: Detect code duplication
+      run: |
+        mkdir -p build/reports/duplication
+        
+        # 创建jscpd配置
+        cat > .jscpd.json << 'EOF'
+        {
+          "threshold": 5,
+          "reporters": ["html", "json", "console"],
+          "ignore": ["node_modules/**", "build/**", "dist/**"],
+          "output": "build/reports/duplication",
+          "format": ["javascript", "json"],
+          "minLines": 5,
+          "minTokens": 50
+        }
+        EOF
+        
+        npx jscpd scripts/ tests/ || true
+        
+    - name: Upload duplication reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: duplication-reports
+        path: build/reports/duplication/
+        retention-days: 30
+
+  documentation-quality:
+    name: Documentation Quality Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Install documentation tools
+      run: |
+        npm install --save-dev markdownlint-cli
+        npm install --save-dev markdown-link-check
+        
+    - name: Lint Markdown files
+      run: |
+        mkdir -p build/reports/markdown
+        
+        # 创建markdownlint配置
+        cat > .markdownlint.json << 'EOF'
+        {
+          "MD013": { "line_length": 120 },
+          "MD033": false,
+          "MD041": false
+        }
+        EOF
+        
+        npx markdownlint docs/ README.md --output build/reports/markdown/lint-report.txt || true
+        npx markdownlint docs/ README.md --json > build/reports/markdown/lint-report.json || true
+        
+    - name: Check markdown links
+      run: |
+        # 检查文档中的链接
+        find docs -name "*.md" -exec npx markdown-link-check {} \; > build/reports/markdown/link-check.txt || true
+        npx markdown-link-check README.md >> build/reports/markdown/link-check.txt || true
+        
+    - name: Analyze documentation coverage
+      run: |
+        # 检查文档覆盖率
+        cat > scripts/check-doc-coverage.js << 'EOF'
+        const fs = require('fs');
+        const path = require('path');
+        
+        function checkDocumentationCoverage() {
+          const results = {
+            schemas: { total: 0, documented: 0 },
+            examples: { total: 0, documented: 0 },
+            languages: { expected: ['en', 'zh', 'tw'], found: [] }
+          };
+          
+          // 检查Schema文档覆盖率
+          if (fs.existsSync('schemas')) {
+            const schemaFiles = fs.readdirSync('schemas').filter(f => f.endsWith('.json'));
+            results.schemas.total = schemaFiles.length;
+            
+            if (fs.existsSync('docs/schema')) {
+              const docFiles = fs.readdirSync('docs/schema').filter(f => f.endsWith('.md'));
+              results.schemas.documented = docFiles.length;
+            }
+          }
+          
+          // 检查示例文档覆盖率
+          if (fs.existsSync('examples')) {
+            const exampleFiles = fs.readdirSync('examples').filter(f => f.endsWith('.json'));
+            results.examples.total = exampleFiles.length;
+            
+            // 检查是否有对应的说明文档
+            results.examples.documented = exampleFiles.filter(f => {
+              const docPath = path.join('docs', 'examples', f.replace('.json', '.md'));
+              return fs.existsSync(docPath);
+            }).length;
+          }
+          
+          // 检查多语言支持
+          if (fs.existsSync('docs')) {
+            results.languages.found = fs.readdirSync('docs')
+              .filter(f => fs.statSync(path.join('docs', f)).isDirectory())
+              .filter(f => results.languages.expected.includes(f));
+          }
+          
+          // 生成报告
+          const report = {
+            timestamp: new Date().toISOString(),
+            coverage: {
+              schemas: {
+                percentage: results.schemas.total > 0 ? (results.schemas.documented / results.schemas.total * 100).toFixed(2) : 0,
+                ...results.schemas
+              },
+              examples: {
+                percentage: results.examples.total > 0 ? (results.examples.documented / results.examples.total * 100).toFixed(2) : 0,
+                ...results.examples
+              },
+              languages: {
+                percentage: (results.languages.found.length / results.languages.expected.length * 100).toFixed(2),
+                ...results.languages
+              }
+            }
+          };
+          
+          fs.writeFileSync('build/reports/markdown/doc-coverage.json', JSON.stringify(report, null, 2));
+          
+          console.log('📊 Documentation Coverage Report:');
+          console.log(`Schema Documentation: ${report.coverage.schemas.percentage}% (${results.schemas.documented}/${results.schemas.total})`);
+          console.log(`Example Documentation: ${report.coverage.examples.percentage}% (${results.examples.documented}/${results.examples.total})`);
+          console.log(`Language Support: ${report.coverage.languages.percentage}% (${results.languages.found.length}/${results.languages.expected.length})`);
+          
+          return report;
+        }
+        
+        checkDocumentationCoverage();
+        EOF
+        
+        node scripts/check-doc-coverage.js
+        
+    - name: Upload documentation reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: documentation-reports
+        path: build/reports/markdown/
+        retention-days: 30
+
+  summary:
+    name: Quality Summary
+    runs-on: ubuntu-latest
+    needs: [eslint, complexity, duplication, documentation-quality]
+    if: always()
+    
+    steps:
+    - name: Download all reports
+      uses: actions/download-artifact@v3
+      with:
+        path: reports/
+        
+    - name: Generate quality summary
+      run: |
+        echo "# 📊 Code Quality Summary" > quality-summary.md
+        echo "" >> quality-summary.md
+        echo "**Build:** $GITHUB_RUN_NUMBER" >> quality-summary.md
+        echo "**Commit:** $GITHUB_SHA" >> quality-summary.md
+        echo "**Branch:** $GITHUB_REF_NAME" >> quality-summary.md
+        echo "**Date:** $(date -u)" >> quality-summary.md
+        echo "" >> quality-summary.md
+        
+        echo "## 🔍 Analysis Results" >> quality-summary.md
+        echo "" >> quality-summary.md
+        
+        # ESLint结果
+        if [ -f "reports/eslint-report/eslint-report.json" ]; then
+          echo "### ESLint Analysis" >> quality-summary.md
+          echo "- Status: ${{ needs.eslint.result }}" >> quality-summary.md
+          echo "" >> quality-summary.md
+        fi
+        
+        # 复杂度分析结果
+        if [ -d "reports/complexity-reports" ]; then
+          echo "### Code Complexity" >> quality-summary.md
+          echo "- Status: ${{ needs.complexity.result }}" >> quality-summary.md
+          echo "" >> quality-summary.md
+        fi
+        
+        # 重复代码检测结果
+        if [ -d "reports/duplication-reports" ]; then
+          echo "### Code Duplication" >> quality-summary.md
+          echo "- Status: ${{ needs.duplication.result }}" >> quality-summary.md
+          echo "" >> quality-summary.md
+        fi
+        
+        # 文档质量结果
+        if [ -d "reports/documentation-reports" ]; then
+          echo "### Documentation Quality" >> quality-summary.md
+          echo "- Status: ${{ needs.documentation-quality.result }}" >> quality-summary.md
+          echo "" >> quality-summary.md
+        fi
+        
+        echo "## 📈 Recommendations" >> quality-summary.md
+        echo "" >> quality-summary.md
+        echo "Based on the analysis results, consider the following improvements:" >> quality-summary.md
+        echo "- Review any ESLint warnings or errors" >> quality-summary.md
+        echo "- Refactor complex functions to improve maintainability" >> quality-summary.md
+        echo "- Eliminate code duplication where possible" >> quality-summary.md
+        echo "- Improve documentation coverage for better project understanding" >> quality-summary.md
+        
+        cat quality-summary.md
+        
+    - name: Upload quality summary
+      uses: actions/upload-artifact@v3
+      with:
+        name: quality-summary
+        path: quality-summary.md
+        retention-days: 90

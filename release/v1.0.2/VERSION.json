@@ -1,9 +1,21 @@
 {
-  "version": "v1.0.2",
-  "status": "frozen",
-  "releaseDate": "2025-06-29",
-  "commit": "",
-  "compatibleWith": ["v1.0.0", "v1.0.1"],
-  "deprecated": false,
-  "notes": "核心协议规范版本，严格按照MPLP 1.0版本开源上线范围规划打包，包含10个核心协议模块的完整JSON Schema定义"
+  "version": "1.0.2",
+  "release_date": "2025-06-29",
+  "build_timestamp": "2025-06-29T07:48:52+08:00",
+  "release_type": "stable",
+  "changelog": {
+    "added": [],
+    "changed": [],
+    "fixed": [],
+    "removed": []
+  },
+  "compatibility": {
+    "min_version": "1.0.0",
+    "breaking_changes": false
+  },
+  "metadata": {
+    "build_environment": "production",
+    "git_commit": "",
+    "build_number": "1.0.2"
+  }
 }

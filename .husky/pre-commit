@@ -1,0 +1,14 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Run lint-staged to check staged files
+npx lint-staged
+
+# Run basic tests on staged files
+echo "🧪 Running quick tests..."
+npm run test:quick || {
+  echo "❌ Tests failed. Please fix the issues before committing."
+  exit 1
+}
+
+echo "✅ Pre-commit checks passed!"

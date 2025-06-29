@@ -1,0 +1,686 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MPLP Monitoring Configuration",
+  "description": "Configuration for MPLP project monitoring and maintenance systems",
+  "type": "object",
+  "properties": {
+    "documentationMonitoring": {
+      "type": "object",
+      "description": "Configuration for documentation quality monitoring",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable documentation monitoring"
+        },
+        "paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": ["docs/", "README.md", "*.md"],
+          "description": "Paths to monitor for documentation"
+        },
+        "excludePaths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": ["node_modules/", ".git/", "reports/"],
+          "description": "Paths to exclude from documentation monitoring"
+        },
+        "checks": {
+          "type": "object",
+          "properties": {
+            "completeness": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "requiredSections": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": ["Installation", "Usage", "API", "Examples"],
+                  "description": "Required sections in documentation"
+                },
+                "minWordCount": {
+                  "type": "integer",
+                  "default": 100,
+                  "description": "Minimum word count for documentation files"
+                }
+              }
+            },
+            "consistency": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "checkTerminology": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Check for consistent terminology usage"
+                },
+                "checkFormatting": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Check for consistent formatting"
+                }
+              }
+            },
+            "translation": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "supportedLanguages": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": ["en", "zh", "ja", "ko"],
+                  "description": "Supported languages for translation quality check"
+                },
+                "checkCompleteness": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Check if all languages have complete translations"
+                }
+              }
+            },
+            "links": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "checkExternal": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Check external links"
+                },
+                "checkInternal": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Check internal links"
+                },
+                "timeout": {
+                  "type": "integer",
+                  "default": 5000,
+                  "description": "Timeout for link checking in milliseconds"
+                }
+              }
+            }
+          }
+        },
+        "thresholds": {
+          "type": "object",
+          "properties": {
+            "qualityScore": {
+              "type": "object",
+              "properties": {
+                "excellent": {
+                  "type": "number",
+                  "default": 90,
+                  "description": "Threshold for excellent quality score"
+                },
+                "good": {
+                  "type": "number",
+                  "default": 75,
+                  "description": "Threshold for good quality score"
+                },
+                "acceptable": {
+                  "type": "number",
+                  "default": 60,
+                  "description": "Threshold for acceptable quality score"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "schemaMonitoring": {
+      "type": "object",
+      "description": "Configuration for schema impact analysis",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable schema monitoring"
+        },
+        "schemaPaths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": ["schemas/", "**/*.schema.json"],
+          "description": "Paths to monitor for schema files"
+        },
+        "versionControl": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable version control for schemas"
+            },
+            "compareWithPrevious": {
+              "type": "boolean",
+              "default": true,
+              "description": "Compare with previous version"
+            },
+            "maxVersionsToKeep": {
+              "type": "integer",
+              "default": 10,
+              "description": "Maximum number of schema versions to keep for comparison"
+            }
+          }
+        },
+        "compatibilityChecks": {
+          "type": "object",
+          "properties": {
+            "backwardCompatibility": {
+              "type": "boolean",
+              "default": true,
+              "description": "Check backward compatibility"
+            },
+            "forwardCompatibility": {
+              "type": "boolean",
+              "default": true,
+              "description": "Check forward compatibility"
+            },
+            "strictMode": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable strict compatibility checking"
+            }
+          }
+        },
+        "impactAnalysis": {
+          "type": "object",
+          "properties": {
+            "analyzeUsage": {
+              "type": "boolean",
+              "default": true,
+              "description": "Analyze schema usage in codebase"
+            },
+            "generateMigrationGuide": {
+              "type": "boolean",
+              "default": true,
+              "description": "Generate migration guide for breaking changes"
+            },
+            "estimateImpact": {
+              "type": "boolean",
+              "default": true,
+              "description": "Estimate impact of schema changes"
+            }
+          }
+        }
+      }
+    },
+    "feedbackMonitoring": {
+      "type": "object",
+      "description": "Configuration for user feedback processing",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable feedback monitoring"
+        },
+        "sources": {
+          "type": "object",
+          "properties": {
+            "githubIssues": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "labels": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": ["feedback", "user-request", "enhancement", "bug"],
+                  "description": "GitHub issue labels to monitor"
+                },
+                "excludeLabels": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": ["wontfix", "duplicate", "invalid"],
+                  "description": "GitHub issue labels to exclude"
+                }
+              }
+            },
+            "pullRequests": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "includeComments": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Include PR comments as feedback"
+                }
+              }
+            },
+            "localFiles": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "paths": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": ["feedback/", "user-feedback.json"],
+                  "description": "Local paths to check for feedback files"
+                }
+              }
+            }
+          }
+        },
+        "classification": {
+          "type": "object",
+          "properties": {
+            "categories": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": ["bug", "feature", "documentation", "performance", "usability", "other"],
+              "description": "Feedback categories"
+            },
+            "priorities": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": ["critical", "high", "medium", "low"],
+              "description": "Feedback priority levels"
+            },
+            "sentimentAnalysis": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable sentiment analysis for feedback"
+            }
+          }
+        },
+        "processing": {
+          "type": "object",
+          "properties": {
+            "autoAssignPriority": {
+              "type": "boolean",
+              "default": true,
+              "description": "Automatically assign priority based on content"
+            },
+            "autoAssignCategory": {
+              "type": "boolean",
+              "default": true,
+              "description": "Automatically assign category based on content"
+            },
+            "generateSummary": {
+              "type": "boolean",
+              "default": true,
+              "description": "Generate summary of feedback trends"
+            }
+          }
+        }
+      }
+    },
+    "dashboard": {
+      "type": "object",
+      "description": "Configuration for monitoring dashboard",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable dashboard generation"
+        },
+        "refreshInterval": {
+          "type": "integer",
+          "default": 3600,
+          "description": "Dashboard refresh interval in seconds"
+        },
+        "metrics": {
+          "type": "object",
+          "properties": {
+            "projectHealth": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "weights": {
+                  "type": "object",
+                  "properties": {
+                    "documentation": {
+                      "type": "number",
+                      "default": 0.3,
+                      "description": "Weight for documentation quality in health score"
+                    },
+                    "schema": {
+                      "type": "number",
+                      "default": 0.25,
+                      "description": "Weight for schema quality in health score"
+                    },
+                    "feedback": {
+                      "type": "number",
+                      "default": 0.25,
+                      "description": "Weight for feedback processing in health score"
+                    },
+                    "performance": {
+                      "type": "number",
+                      "default": 0.2,
+                      "description": "Weight for performance metrics in health score"
+                    }
+                  }
+                }
+              }
+            },
+            "trends": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "historyDays": {
+                  "type": "integer",
+                  "default": 30,
+                  "description": "Number of days to include in trend analysis"
+                }
+              }
+            },
+            "alerts": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "thresholds": {
+                  "type": "object",
+                  "properties": {
+                    "healthScore": {
+                      "type": "object",
+                      "properties": {
+                        "critical": {
+                          "type": "number",
+                          "default": 50,
+                          "description": "Critical health score threshold"
+                        },
+                        "warning": {
+                          "type": "number",
+                          "default": 70,
+                          "description": "Warning health score threshold"
+                        }
+                      }
+                    },
+                    "documentationQuality": {
+                      "type": "number",
+                      "default": 60,
+                      "description": "Documentation quality alert threshold"
+                    },
+                    "criticalFeedback": {
+                      "type": "integer",
+                      "default": 1,
+                      "description": "Number of critical feedback items to trigger alert"
+                    },
+                    "highPriorityFeedback": {
+                      "type": "integer",
+                      "default": 5,
+                      "description": "Number of high priority feedback items to trigger alert"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "output": {
+          "type": "object",
+          "properties": {
+            "formats": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["html", "json", "markdown"]
+              },
+              "default": ["html", "json", "markdown"],
+              "description": "Output formats for dashboard"
+            },
+            "includeCharts": {
+              "type": "boolean",
+              "default": true,
+              "description": "Include charts in HTML dashboard"
+            },
+            "includeRawData": {
+              "type": "boolean",
+              "default": false,
+              "description": "Include raw data in output"
+            }
+          }
+        }
+      }
+    },
+    "notifications": {
+      "type": "object",
+      "description": "Configuration for notifications and alerts",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable notifications"
+        },
+        "channels": {
+          "type": "object",
+          "properties": {
+            "github": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "createIssues": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Create GitHub issues for critical alerts"
+                },
+                "commentOnPR": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Comment on PRs with monitoring results"
+                }
+              }
+            },
+            "slack": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "webhookUrl": {
+                  "type": "string",
+                  "description": "Slack webhook URL (use environment variable)"
+                },
+                "channel": {
+                  "type": "string",
+                  "default": "#monitoring",
+                  "description": "Slack channel for notifications"
+                }
+              }
+            },
+            "email": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "recipients": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Email recipients for notifications"
+                },
+                "onlyForCritical": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Only send emails for critical alerts"
+                }
+              }
+            }
+          }
+        },
+        "frequency": {
+          "type": "object",
+          "properties": {
+            "immediate": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": ["critical"],
+              "description": "Alert levels that trigger immediate notifications"
+            },
+            "daily": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": ["warning", "info"],
+              "description": "Alert levels included in daily summaries"
+            },
+            "weekly": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": ["info"],
+              "description": "Alert levels included in weekly summaries"
+            }
+          }
+        }
+      }
+    },
+    "reporting": {
+      "type": "object",
+      "description": "Configuration for report generation",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable report generation"
+        },
+        "outputDirectory": {
+          "type": "string",
+          "default": "reports",
+          "description": "Directory for generated reports"
+        },
+        "retention": {
+          "type": "object",
+          "properties": {
+            "days": {
+              "type": "integer",
+              "default": 90,
+              "description": "Number of days to retain reports"
+            },
+            "maxFiles": {
+              "type": "integer",
+              "default": 100,
+              "description": "Maximum number of report files to keep"
+            }
+          }
+        },
+        "formats": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["json", "markdown", "html", "csv"]
+          },
+          "default": ["json", "markdown"],
+          "description": "Report output formats"
+        },
+        "includeMetadata": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include metadata in reports"
+        }
+      }
+    },
+    "performance": {
+      "type": "object",
+      "description": "Configuration for performance monitoring",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable performance monitoring"
+        },
+        "timeouts": {
+          "type": "object",
+          "properties": {
+            "linkCheck": {
+              "type": "integer",
+              "default": 5000,
+              "description": "Timeout for link checking in milliseconds"
+            },
+            "schemaValidation": {
+              "type": "integer",
+              "default": 10000,
+              "description": "Timeout for schema validation in milliseconds"
+            },
+            "feedbackProcessing": {
+              "type": "integer",
+              "default": 30000,
+              "description": "Timeout for feedback processing in milliseconds"
+            }
+          }
+        },
+        "limits": {
+          "type": "object",
+          "properties": {
+            "maxFilesPerCheck": {
+              "type": "integer",
+              "default": 1000,
+              "description": "Maximum number of files to check in one run"
+            },
+            "maxFeedbackItems": {
+              "type": "integer",
+              "default": 500,
+              "description": "Maximum number of feedback items to process in one run"
+            },
+            "maxConcurrentChecks": {
+              "type": "integer",
+              "default": 10,
+              "description": "Maximum number of concurrent checks"
+            }
+          }
+        }
+      }
+    }
+  },
+  "required": ["documentationMonitoring", "schemaMonitoring", "feedbackMonitoring", "dashboard"]
+}

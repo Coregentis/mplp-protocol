@@ -1,0 +1,255 @@
+name: 错误报告 / Bug Report
+description: 报告项目中的错误或问题 / Report a bug or issue in the project
+title: "[错误/Bug]: "
+labels: ["bug", "needs-triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢您报告 MPLP 项目中的错误！
+        
+        Thank you for reporting a bug in the MPLP project!
+        
+        请提供详细信息以帮助我们快速定位和修复问题。
+        Please provide detailed information to help us quickly locate and fix the issue.
+
+  - type: dropdown
+    id: bug-severity
+    attributes:
+      label: 错误严重程度 / Bug Severity
+      description: 这个错误对您的使用影响程度 / How much does this bug affect your usage
+      options:
+        - 低 / Low - 轻微问题，不影响主要功能 / Minor issue, does not affect main functionality
+        - 中 / Medium - 影响部分功能，但有变通方法 / Affects some functionality, but workarounds exist
+        - 高 / High - 严重影响使用，难以变通 / Seriously affects usage, difficult to work around
+        - 紧急 / Critical - 完全无法使用或数据丢失 / Completely unusable or data loss
+    validations:
+      required: true
+
+  - type: dropdown
+    id: bug-category
+    attributes:
+      label: 错误类别 / Bug Category
+      description: 这个错误属于哪个类别 / Which category does this bug belong to
+      options:
+        - 核心协议 / Core Protocol
+        - JSON Schema 验证 / JSON Schema Validation
+        - 文档生成 / Documentation Generation
+        - 工具链 / Toolchain
+        - 发布流程 / Release Process
+        - 监控系统 / Monitoring System
+        - 性能问题 / Performance Issue
+        - 兼容性问题 / Compatibility Issue
+        - 安全问题 / Security Issue
+        - 用户界面 / User Interface
+        - 其他 / Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: bug-description
+    attributes:
+      label: 错误描述 / Bug Description
+      description: 清楚简洁地描述这个错误 / A clear and concise description of the bug
+      placeholder: 请描述发生了什么错误... / Please describe what bug occurred...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: 期望行为 / Expected Behavior
+      description: 您期望应该发生什么 / What you expected to happen
+      placeholder: 请描述您期望的正确行为... / Please describe the correct behavior you expected...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: 实际行为 / Actual Behavior
+      description: 实际发生了什么 / What actually happened
+      placeholder: 请描述实际发生的行为... / Please describe what actually happened...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction-steps
+    attributes:
+      label: 重现步骤 / Steps to Reproduce
+      description: 详细的重现步骤 / Detailed steps to reproduce the issue
+      placeholder: |
+        请提供详细的重现步骤：/ Please provide detailed reproduction steps:
+        
+        1. 执行命令 '...' / Execute command '...'
+        2. 点击 '...' / Click on '...'
+        3. 滚动到 '...' / Scroll down to '...'
+        4. 看到错误 / See error
+      value: |
+        1. 
+        2. 
+        3. 
+        4. 
+    validations:
+      required: true
+
+  - type: textarea
+    id: error-messages
+    attributes:
+      label: 错误消息 / Error Messages
+      description: 完整的错误消息、堆栈跟踪或日志 / Complete error messages, stack traces, or logs
+      placeholder: 请粘贴完整的错误消息... / Please paste the complete error message...
+      render: shell
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: 环境信息 / Environment Information
+      description: 请提供您的环境详细信息 / Please provide details about your environment
+      placeholder: |
+        - 操作系统 / Operating System: (例如 / e.g., Windows 11, macOS 13.4, Ubuntu 22.04)
+        - Node.js 版本 / Node.js Version: (例如 / e.g., v18.17.0)
+        - npm/yarn 版本 / npm/yarn Version: (例如 / e.g., npm 9.6.7)
+        - MPLP 版本 / MPLP Version: (例如 / e.g., v1.0.0)
+        - 浏览器和版本 / Browser and Version: (如适用 / if applicable)
+        - 其他相关工具版本 / Other relevant tool versions:
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: minimal-reproduction
+    attributes:
+      label: 最小重现示例 / Minimal Reproduction Example
+      description: 提供能重现问题的最小代码示例 / Provide minimal code example that reproduces the issue
+      placeholder: |
+        请提供最小的重现示例：/ Please provide a minimal reproduction example:
+        
+        ```javascript
+        // 您的代码示例 / Your code example
+        ```
+        
+        或者提供：/ Or provide:
+        - GitHub 仓库链接 / GitHub repository link
+        - CodeSandbox 链接 / CodeSandbox link
+        - 配置文件 / Configuration files
+      render: markdown
+
+  - type: textarea
+    id: workarounds
+    attributes:
+      label: 变通方法 / Workarounds
+      description: 您找到的任何临时解决方案 / Any temporary solutions you have found
+      placeholder: |
+        如果您找到了变通方法，请描述：/ If you found workarounds, please describe:
+        
+        - 临时解决方案 / Temporary solution
+        - 解决方案的限制 / Limitations of the solution
+        - 是否适用于所有情况 / Whether it applies to all cases
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: 发生频率 / Frequency
+      description: 这个错误多久发生一次 / How often does this bug occur
+      options:
+        - 总是 / Always - 每次都发生 / Happens every time
+        - 经常 / Often - 大部分时候发生 / Happens most of the time
+        - 有时 / Sometimes - 偶尔发生 / Happens occasionally
+        - 很少 / Rarely - 很少发生 / Happens rarely
+        - 一次 / Once - 只发生过一次 / Happened only once
+    validations:
+      required: true
+
+  - type: dropdown
+    id: regression
+    attributes:
+      label: 回归问题 / Regression
+      description: 这是新出现的问题还是一直存在的 / Is this a new issue or has it always existed
+      options:
+        - 新问题 / New Issue - 之前版本正常工作 / Previous versions worked fine
+        - 一直存在 / Always Existed - 从未正常工作过 / Never worked properly
+        - 不确定 / Not Sure - 不确定之前的状态 / Not sure about previous state
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 附加信息 / Additional Context
+      description: 任何其他有助于理解问题的信息 / Any other information that helps understand the issue
+      placeholder: |
+        请提供任何其他相关信息：/ Please provide any other relevant information:
+        
+        - 相关的配置文件 / Related configuration files
+        - 网络环境信息 / Network environment information
+        - 相关的第三方库版本 / Related third-party library versions
+        - 截图或录屏 / Screenshots or recordings
+        - 相关的 Issues 或讨论链接 / Links to related issues or discussions
+
+  - type: textarea
+    id: impact-assessment
+    attributes:
+      label: 影响评估 / Impact Assessment
+      description: 这个错误如何影响您的工作或项目 / How does this bug affect your work or project
+      placeholder: |
+        请描述影响：/ Please describe the impact:
+        
+        - 对您工作流程的影响 / Impact on your workflow
+        - 影响的用户数量 / Number of users affected
+        - 业务影响 / Business impact
+        - 时间敏感性 / Time sensitivity
+
+  - type: checkboxes
+    id: investigation
+    attributes:
+      label: 调查情况 / Investigation Status
+      description: 您已经进行了哪些调查 / What investigation have you already done
+      options:
+        - label: 我已经搜索了现有的 Issues / I have searched existing issues
+          required: true
+        - label: 我已经查看了相关文档 / I have checked relevant documentation
+          required: false
+        - label: 我已经尝试了最新版本 / I have tried the latest version
+          required: false
+        - label: 我已经尝试了不同的环境 / I have tried different environments
+          required: false
+        - label: 我已经检查了网络连接 / I have checked network connectivity
+          required: false
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: 确认 / Confirmation
+      description: 请确认以下事项 / Please confirm the following
+      options:
+        - label: 我确认这是一个真实的错误，而不是使用问题 / I confirm this is a real bug, not a usage issue
+          required: true
+        - label: 我已经提供了足够的信息来重现这个问题 / I have provided enough information to reproduce this issue
+          required: true
+        - label: 我愿意在需要时提供更多信息或测试修复 / I am willing to provide more information or test fixes when needed
+          required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        
+        **感谢您的错误报告！/ Thank you for your bug report!**
+        
+        我们会尽快调查这个问题。如果需要更多信息，我们会在这个 Issue 中询问。
+        
+        We will investigate this issue as soon as possible. If we need more information, we will ask in this issue.
+        
+        **处理流程 / Process:**
+        1. 🔍 **分类** / Triage - 我们会评估和标记这个问题
+        2. 🔧 **调查** / Investigation - 开发者会调查根本原因
+        3. 💻 **修复** / Fix - 开发和测试修复方案
+        4. ✅ **验证** / Verification - 确认修复有效
+        5. 🚀 **发布** / Release - 在下一个版本中包含修复
+        
+        **紧急问题 / Urgent Issues:**
+        如果这是安全问题或紧急错误，请发送邮件至 [security@example.com] 或在 Issue 中标记 @maintainers
+        
+        If this is a security issue or urgent bug, please email [security@example.com] or tag @maintainers in the issue

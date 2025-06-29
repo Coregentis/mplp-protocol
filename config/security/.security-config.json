@@ -1,0 +1,262 @@
+{
+  "security": {
+    "version": "1.0.0",
+    "lastUpdated": "2024-01-15T00:00:00Z",
+    "policies": {
+      "secretDetection": {
+        "enabled": true,
+        "patterns": [
+          {
+            "name": "AWS Access Key",
+            "pattern": "AKIA[0-9A-Z]{16}",
+            "severity": "critical"
+          },
+          {
+            "name": "AWS Secret Key",
+            "pattern": "[0-9a-zA-Z/+]{40}",
+            "severity": "critical"
+          },
+          {
+            "name": "GitHub Token",
+            "pattern": "ghp_[0-9a-zA-Z]{36}",
+            "severity": "high"
+          },
+          {
+            "name": "Generic API Key",
+            "pattern": "api[_-]?key\\s*[=:]\\s*[\"'][^\"']+[\"']",
+            "severity": "high"
+          },
+          {
+            "name": "Generic Password",
+            "pattern": "password\\s*[=:]\\s*[\"'][^\"']+[\"']",
+            "severity": "medium"
+          },
+          {
+            "name": "Generic Secret",
+            "pattern": "secret\\s*[=:]\\s*[\"'][^\"']+[\"']",
+            "severity": "high"
+          },
+          {
+            "name": "Generic Token",
+            "pattern": "token\\s*[=:]\\s*[\"'][^\"']+[\"']",
+            "severity": "high"
+          },
+          {
+            "name": "Private Key",
+            "pattern": "-----BEGIN (RSA |EC |DSA )?PRIVATE KEY-----",
+            "severity": "critical"
+          },
+          {
+            "name": "Database URL",
+            "pattern": "(mongodb|mysql|postgres|redis)://[^\\s]+",
+            "severity": "medium"
+          }
+        ],
+        "excludePatterns": [
+          "test",
+          "example",
+          "demo",
+          "placeholder",
+          "YOUR_API_KEY",
+          "YOUR_SECRET",
+          "YOUR_TOKEN"
+        ],
+        "excludeFiles": [
+          "*.test.js",
+          "*.spec.js",
+          "*.example.js",
+          "*.mock.js",
+          "test/**/*",
+          "tests/**/*",
+          "examples/**/*",
+          "docs/**/*"
+        ]
+      },
+      "dependencyScanning": {
+        "enabled": true,
+        "sources": [
+          "npm-audit",
+          "snyk",
+          "github-advisory"
+        ],
+        "severityThresholds": {
+          "critical": 0,
+          "high": 2,
+          "medium": 10,
+          "low": 50
+        },
+        "excludePackages": [],
+        "allowedVulnerabilities": []
+      },
+      "licenseCompliance": {
+        "enabled": true,
+        "allowedLicenses": [
+          "MIT",
+          "Apache-2.0",
+          "BSD-3-Clause",
+          "BSD-2-Clause",
+          "ISC",
+          "CC0-1.0",
+          "Unlicense",
+          "WTFPL"
+        ],
+        "prohibitedLicenses": [
+          "GPL-2.0",
+          "GPL-3.0",
+          "AGPL-1.0",
+          "AGPL-3.0",
+          "LGPL-2.0",
+          "LGPL-2.1",
+          "LGPL-3.0",
+          "CPAL-1.0",
+          "EPL-1.0",
+          "EPL-2.0"
+        ],
+        "requireLicenseFile": true,
+        "requirePackageLicenseInfo": true
+      },
+      "codeQuality": {
+        "enabled": true,
+        "rules": {
+          "noHardcodedCredentials": true,
+          "noSqlInjection": true,
+          "noXssVulnerabilities": true,
+          "noCsrfVulnerabilities": true,
+          "noInsecureRandomness": true,
+          "noWeakCryptography": true,
+          "noInsecureDeserialization": true,
+          "noPathTraversal": true,
+          "noCommandInjection": true,
+          "noLdapInjection": true
+        },
+        "customRules": []
+      }
+    },
+    "compliance": {
+      "standards": [
+        "OWASP-Top-10",
+        "CWE-Top-25",
+        "NIST-Cybersecurity-Framework"
+      ],
+      "requirements": {
+        "dataProtection": {
+          "encryptionAtRest": false,
+          "encryptionInTransit": true,
+          "dataClassification": "public",
+          "retentionPolicy": "90-days"
+        },
+        "accessControl": {
+          "authentication": "not-required",
+          "authorization": "not-required",
+          "roleBasedAccess": false,
+          "multiFactorAuth": false
+        },
+        "auditLogging": {
+          "enabled": false,
+          "logLevel": "info",
+          "retentionDays": 30,
+          "logSensitiveData": false
+        }
+      }
+    },
+    "monitoring": {
+      "securityEvents": {
+        "enabled": true,
+        "alertOnSuspiciousActivity": true,
+        "alertOnSecurityViolations": true,
+        "alertOnComplianceFailures": true
+      },
+      "vulnerabilityScanning": {
+        "enabled": true,
+        "frequency": "daily",
+        "autoRemediation": false,
+        "alertOnNewVulnerabilities": true
+      },
+      "integrityChecking": {
+        "enabled": true,
+        "checksumValidation": true,
+        "signatureVerification": false,
+        "tamperDetection": true
+      }
+    },
+    "incident": {
+      "response": {
+        "enabled": true,
+        "escalationMatrix": {
+          "critical": {
+            "timeToRespond": "15-minutes",
+            "contacts": ["security-team", "management"]
+          },
+          "high": {
+            "timeToRespond": "1-hour",
+            "contacts": ["security-team"]
+          },
+          "medium": {
+            "timeToRespond": "4-hours",
+            "contacts": ["development-team"]
+          },
+          "low": {
+            "timeToRespond": "24-hours",
+            "contacts": ["development-team"]
+          }
+        },
+        "communicationChannels": {
+          "email": {
+            "enabled": false,
+            "recipients": []
+          },
+          "slack": {
+            "enabled": false,
+            "webhook": "",
+            "channel": "#security-alerts"
+          },
+          "webhook": {
+            "enabled": false,
+            "url": ""
+          }
+        }
+      },
+      "forensics": {
+        "enabled": true,
+        "preserveEvidence": true,
+        "logRetention": "1-year",
+        "chainOfCustody": false
+      }
+    },
+    "training": {
+      "securityAwareness": {
+        "required": false,
+        "frequency": "annually",
+        "topics": [
+          "secure-coding",
+          "threat-modeling",
+          "incident-response",
+          "compliance-requirements"
+        ]
+      },
+      "certifications": {
+        "required": [],
+        "recommended": [
+          "CISSP",
+          "CISM",
+          "CEH",
+          "GSEC"
+        ]
+      }
+    }
+  },
+  "metadata": {
+    "createdBy": "Enhanced Release Manager",
+    "createdDate": "2024-01-15T00:00:00Z",
+    "lastModifiedBy": "system",
+    "lastModifiedDate": "2024-01-15T00:00:00Z",
+    "version": "1.0.0",
+    "description": "Security configuration for MPLP release process",
+    "tags": [
+      "security",
+      "compliance",
+      "release",
+      "mplp"
+    ]
+  }
+}

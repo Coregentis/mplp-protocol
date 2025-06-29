@@ -32,7 +32,7 @@ The **Multi-Agent Project Lifecycle Protocol (MPLP)** is a comprehensive, modula
 - 🤝 **Multi-Agent Coordination**: Standardized protocols for agent collaboration
 - 🌐 **Language Agnostic**: Works with any programming language or framework
 - 📋 **JSON Schema Validation**: Strict data structure validation
-- 🌍 **Multilingual Support**: Documentation in 10 languages
+- 🌍 **Multilingual Support**: Documentation in 3 languages
 - 🔧 **Extensible Design**: Easy to adapt and extend for specific use cases
 - 🏗️ **Modular Architecture**: Pick and choose the modules you need
 
@@ -117,13 +117,6 @@ mplp-protocol/
 │   └── docs/              # Multilingual documentation
 │       ├── en/            # English documentation
 │       ├── zh/            # 中文文档
-│       ├── de/            # Deutsche Dokumentation
-│       ├── es/            # Documentación en español
-│       ├── fr/            # Documentation française
-│       ├── it/            # Documentazione italiana
-│       ├── jp/            # 日本語ドキュメント
-│       ├── kr/            # 한국어 문서
-│       ├── ru/            # Русская документация
 │       └── tw/            # 繁體中文文件
 └── 🚧 dev/                 # Development workspace
 ```
@@ -148,68 +141,7 @@ mplp-protocol/
 
 </details>
 
-<details>
-<summary><strong>🇩🇪 Deutsch</strong></summary>
 
-- **Dokumentation**: [`docs/de/`](./release/v1.0.2/docs/de/)
-- **Schemas**: [`docs/de/schemas/`](./release/v1.0.2/docs/de/schemas/)
-- **Status**: Vollständig ✅
-
-</details>
-
-<details>
-<summary><strong>🇪🇸 Español</strong></summary>
-
-- **Documentación**: [`docs/es/`](./release/v1.0.2/docs/es/)
-- **Esquemas**: [`docs/es/schemas/`](./release/v1.0.2/docs/es/schemas/)
-- **Estado**: Completo ✅
-
-</details>
-
-<details>
-<summary><strong>🇫🇷 Français</strong></summary>
-
-- **Documentation**: [`docs/fr/`](./release/v1.0.2/docs/fr/)
-- **Schémas**: [`docs/fr/schemas/`](./release/v1.0.2/docs/fr/schemas/)
-- **Statut**: Complet ✅
-
-</details>
-
-<details>
-<summary><strong>🇮🇹 Italiano</strong></summary>
-
-- **Documentazione**: [`docs/it/`](./release/v1.0.2/docs/it/)
-- **Schemi**: [`docs/it/schemas/`](./release/v1.0.2/docs/it/schemas/)
-- **Stato**: Completo ✅
-
-</details>
-
-<details>
-<summary><strong>🇯🇵 日本語</strong></summary>
-
-- **ドキュメント**: [`docs/jp/`](./release/v1.0.2/docs/jp/)
-- **スキーマ**: [`docs/jp/schemas/`](./release/v1.0.2/docs/jp/schemas/)
-- **ステータス**: 完了 ✅
-
-</details>
-
-<details>
-<summary><strong>🇰🇷 한국어</strong></summary>
-
-- **문서**: [`docs/kr/`](./release/v1.0.2/docs/kr/)
-- **스키마**: [`docs/kr/schemas/`](./release/v1.0.2/docs/kr/schemas/)
-- **상태**: 완료 ✅
-
-</details>
-
-<details>
-<summary><strong>🇷🇺 Русский</strong></summary>
-
-- **Документация**: [`docs/ru/`](./release/v1.0.2/docs/ru/)
-- **Схемы**: [`docs/ru/schemas/`](./release/v1.0.2/docs/ru/schemas/)
-- **Статус**: Завершено ✅
-
-</details>
 
 <details>
 <summary><strong>🇹🇼 繁體中文</strong></summary>
@@ -240,6 +172,8 @@ npm run validate:examples
 # Run all tests
 npm test
 ```
+
+
 
 ## 🚀 Project Status
 

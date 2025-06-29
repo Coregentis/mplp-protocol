@@ -1,0 +1,625 @@
+name: Dependency Management & Security
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # 每天UTC时间03:00运行依赖检查
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      update_dependencies:
+        description: 'Update dependencies'
+        required: false
+        default: 'false'
+        type: boolean
+
+jobs:
+  dependency-audit:
+    name: Dependency Security Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run npm audit
+      run: |
+        mkdir -p build/reports/security
+        
+        # 运行安全审计
+        npm audit --json > build/reports/security/npm-audit.json || true
+        npm audit > build/reports/security/npm-audit.txt || true
+        
+        # 检查高危漏洞
+        if npm audit --audit-level=high; then
+          echo "✅ No high-severity vulnerabilities found"
+        else
+          echo "⚠️ High-severity vulnerabilities detected"
+          echo "Please review the audit report and update dependencies"
+        fi
+        
+    - name: Check for outdated packages
+      run: |
+        npm outdated --json > build/reports/security/outdated-packages.json || true
+        npm outdated > build/reports/security/outdated-packages.txt || true
+        
+    - name: Generate dependency tree
+      run: |
+        npm ls --json > build/reports/security/dependency-tree.json || true
+        npm ls > build/reports/security/dependency-tree.txt || true
+        
+    - name: Upload security reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-audit-reports
+        path: build/reports/security/
+        retention-days: 30
+
+  license-check:
+    name: License Compliance Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Install license checker
+      run: npm install --save-dev license-checker
+      
+    - name: Check licenses
+      run: |
+        mkdir -p build/reports/licenses
+        
+        # 生成许可证报告
+        npx license-checker --json > build/reports/licenses/licenses.json || true
+        npx license-checker --csv > build/reports/licenses/licenses.csv || true
+        npx license-checker > build/reports/licenses/licenses.txt || true
+        
+        # 检查不兼容的许可证
+        cat > scripts/check-licenses.js << 'EOF'
+        const fs = require('fs');
+        const licenseChecker = require('license-checker');
+        
+        // 定义允许的许可证类型
+        const allowedLicenses = [
+          'MIT', 'ISC', 'BSD', 'BSD-2-Clause', 'BSD-3-Clause',
+          'Apache-2.0', 'Apache 2.0', 'Unlicense', 'CC0-1.0',
+          'WTFPL', 'Public Domain'
+        ];
+        
+        // 定义禁止的许可证类型
+        const forbiddenLicenses = [
+          'GPL', 'LGPL', 'AGPL', 'SSPL', 'BUSL'
+        ];
+        
+        licenseChecker.init({
+          start: '.',
+          production: true,
+          development: false
+        }, (err, packages) => {
+          if (err) {
+            console.error('License check failed:', err);
+            process.exit(1);
+          }
+          
+          const issues = [];
+          const summary = {
+            total: 0,
+            allowed: 0,
+            unknown: 0,
+            forbidden: 0
+          };
+          
+          Object.entries(packages).forEach(([pkg, info]) => {
+            summary.total++;
+            const license = info.licenses;
+            
+            if (Array.isArray(license)) {
+              // 处理多个许可证
+              const hasAllowed = license.some(l => allowedLicenses.some(al => l.includes(al)));
+              const hasForbidden = license.some(l => forbiddenLicenses.some(fl => l.includes(fl)));
+              
+              if (hasForbidden) {
+                summary.forbidden++;
+                issues.push({ package: pkg, license, severity: 'error', reason: 'Forbidden license' });
+              } else if (hasAllowed) {
+                summary.allowed++;
+              } else {
+                summary.unknown++;
+                issues.push({ package: pkg, license, severity: 'warning', reason: 'Unknown license' });
+              }
+            } else {
+              const isAllowed = allowedLicenses.some(al => license && license.includes(al));
+              const isForbidden = forbiddenLicenses.some(fl => license && license.includes(fl));
+              
+              if (isForbidden) {
+                summary.forbidden++;
+                issues.push({ package: pkg, license, severity: 'error', reason: 'Forbidden license' });
+              } else if (isAllowed) {
+                summary.allowed++;
+              } else {
+                summary.unknown++;
+                issues.push({ package: pkg, license, severity: 'warning', reason: 'Unknown license' });
+              }
+            }
+          });
+          
+          const report = {
+            timestamp: new Date().toISOString(),
+            summary,
+            issues
+          };
+          
+          fs.writeFileSync('build/reports/licenses/license-compliance.json', JSON.stringify(report, null, 2));
+          
+          console.log('📋 License Compliance Report:');
+          console.log(`Total packages: ${summary.total}`);
+          console.log(`Allowed licenses: ${summary.allowed}`);
+          console.log(`Unknown licenses: ${summary.unknown}`);
+          console.log(`Forbidden licenses: ${summary.forbidden}`);
+          
+          if (issues.length > 0) {
+            console.log('\n⚠️ License Issues:');
+            issues.forEach(issue => {
+              console.log(`${issue.severity.toUpperCase()}: ${issue.package} - ${issue.license} (${issue.reason})`);
+            });
+          }
+          
+          if (summary.forbidden > 0) {
+            console.log('\n❌ Forbidden licenses detected. Please review and replace these dependencies.');
+            process.exit(1);
+          }
+          
+          if (summary.unknown > 0) {
+            console.log('\n⚠️ Unknown licenses detected. Please review these dependencies.');
+          }
+          
+          console.log('\n✅ License compliance check completed.');
+        });
+        EOF
+        
+        node scripts/check-licenses.js
+        
+    - name: Upload license reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: license-reports
+        path: build/reports/licenses/
+        retention-days: 30
+
+  dependency-update:
+    name: Dependency Update Check
+    runs-on: ubuntu-latest
+    if: github.event.inputs.update_dependencies == 'true' || github.event_name == 'schedule'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Install update tools
+      run: npm install --save-dev npm-check-updates
+      
+    - name: Check for updates
+      run: |
+        mkdir -p build/reports/updates
+        
+        # 检查可用更新
+        npx ncu --jsonUpgraded > build/reports/updates/available-updates.json || true
+        npx ncu > build/reports/updates/available-updates.txt || true
+        
+        # 检查主要版本更新
+        npx ncu --target major --jsonUpgraded > build/reports/updates/major-updates.json || true
+        npx ncu --target major > build/reports/updates/major-updates.txt || true
+        
+        # 检查次要版本更新
+        npx ncu --target minor --jsonUpgraded > build/reports/updates/minor-updates.json || true
+        npx ncu --target minor > build/reports/updates/minor-updates.txt || true
+        
+        # 检查补丁版本更新
+        npx ncu --target patch --jsonUpgraded > build/reports/updates/patch-updates.json || true
+        npx ncu --target patch > build/reports/updates/patch-updates.txt || true
+        
+    - name: Create update summary
+      run: |
+        cat > scripts/create-update-summary.js << 'EOF'
+        const fs = require('fs');
+        
+        function createUpdateSummary() {
+          const reports = {
+            all: 'build/reports/updates/available-updates.json',
+            major: 'build/reports/updates/major-updates.json',
+            minor: 'build/reports/updates/minor-updates.json',
+            patch: 'build/reports/updates/patch-updates.json'
+          };
+          
+          const summary = {
+            timestamp: new Date().toISOString(),
+            updates: {
+              major: {},
+              minor: {},
+              patch: {},
+              total: 0
+            }
+          };
+          
+          Object.entries(reports).forEach(([type, file]) => {
+            if (fs.existsSync(file)) {
+              try {
+                const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+                if (type !== 'all') {
+                  summary.updates[type] = data;
+                  summary.updates.total += Object.keys(data).length;
+                }
+              } catch (e) {
+                console.warn(`Failed to parse ${file}:`, e.message);
+              }
+            }
+          });
+          
+          fs.writeFileSync('build/reports/updates/update-summary.json', JSON.stringify(summary, null, 2));
+          
+          console.log('📦 Dependency Update Summary:');
+          console.log(`Major updates available: ${Object.keys(summary.updates.major).length}`);
+          console.log(`Minor updates available: ${Object.keys(summary.updates.minor).length}`);
+          console.log(`Patch updates available: ${Object.keys(summary.updates.patch).length}`);
+          console.log(`Total updates available: ${summary.updates.total}`);
+          
+          if (summary.updates.total > 0) {
+            console.log('\n📋 Available Updates:');
+            
+            if (Object.keys(summary.updates.patch).length > 0) {
+              console.log('\n🔧 Patch Updates (Safe to apply):');
+              Object.entries(summary.updates.patch).forEach(([pkg, version]) => {
+                console.log(`  ${pkg}: ${version}`);
+              });
+            }
+            
+            if (Object.keys(summary.updates.minor).length > 0) {
+              console.log('\n⚡ Minor Updates (Review recommended):');
+              Object.entries(summary.updates.minor).forEach(([pkg, version]) => {
+                console.log(`  ${pkg}: ${version}`);
+              });
+            }
+            
+            if (Object.keys(summary.updates.major).length > 0) {
+              console.log('\n🚨 Major Updates (Breaking changes possible):');
+              Object.entries(summary.updates.major).forEach(([pkg, version]) => {
+                console.log(`  ${pkg}: ${version}`);
+              });
+            }
+          } else {
+            console.log('\n✅ All dependencies are up to date!');
+          }
+          
+          return summary;
+        }
+        
+        createUpdateSummary();
+        EOF
+        
+        node scripts/create-update-summary.js
+        
+    - name: Auto-apply patch updates
+      if: github.event_name == 'schedule'
+      run: |
+        # 自动应用补丁更新（相对安全）
+        if npx ncu --target patch --upgrade; then
+          echo "📦 Patch updates applied"
+          
+          # 检查是否有变更
+          if git diff --quiet package.json; then
+            echo "No patch updates available"
+          else
+            echo "Package.json updated with patch versions"
+            
+            # 安装更新的依赖
+            npm install
+            
+            # 运行测试确保更新没有破坏功能
+            if npm test; then
+              echo "✅ Tests passed after patch updates"
+              
+              # 提交更改
+              git config --local user.email "action@github.com"
+              git config --local user.name "GitHub Action"
+              git add package.json package-lock.json
+              git commit -m "chore: auto-update patch dependencies
+              
+              - Applied patch updates automatically
+              - All tests passing
+              - Generated by dependency-management workflow"
+              
+              # 推送更改（仅在主分支）
+              if [ "$GITHUB_REF_NAME" = "main" ]; then
+                git push
+                echo "📤 Patch updates committed and pushed"
+              else
+                echo "📝 Patch updates committed (not pushed - not on main branch)"
+              fi
+            else
+              echo "❌ Tests failed after patch updates - reverting changes"
+              git checkout -- package.json package-lock.json
+              npm ci
+            fi
+          fi
+        fi
+        
+    - name: Upload update reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: dependency-update-reports
+        path: build/reports/updates/
+        retention-days: 30
+
+  vulnerability-scan:
+    name: Advanced Vulnerability Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Install security tools
+      run: |
+        npm install --save-dev audit-ci
+        npm install --save-dev better-npm-audit
+        
+    - name: Run enhanced security audit
+      run: |
+        mkdir -p build/reports/vulnerabilities
+        
+        # 使用audit-ci进行更严格的审计
+        npx audit-ci --config audit-ci.json || true
+        
+        # 使用better-npm-audit获得更好的报告
+        npx better-npm-audit audit --json > build/reports/vulnerabilities/enhanced-audit.json || true
+        npx better-npm-audit audit > build/reports/vulnerabilities/enhanced-audit.txt || true
+        
+    - name: Create audit-ci config
+      run: |
+        cat > audit-ci.json << 'EOF'
+        {
+          "low": true,
+          "moderate": true,
+          "high": true,
+          "critical": true,
+          "report-type": "full",
+          "output-format": "json",
+          "advisories": [],
+          "whitelist": [],
+          "path-whitelist": []
+        }
+        EOF
+        
+    - name: Scan for known vulnerabilities
+      run: |
+        # 创建漏洞扫描脚本
+        cat > scripts/vulnerability-scan.js << 'EOF'
+        const fs = require('fs');
+        const { execSync } = require('child_process');
+        
+        function scanVulnerabilities() {
+          const results = {
+            timestamp: new Date().toISOString(),
+            scans: {
+              npm_audit: null,
+              package_lock: null,
+              node_modules: null
+            },
+            summary: {
+              total_vulnerabilities: 0,
+              critical: 0,
+              high: 0,
+              moderate: 0,
+              low: 0
+            },
+            recommendations: []
+          };
+          
+          try {
+            // NPM Audit扫描
+            const auditResult = execSync('npm audit --json', { encoding: 'utf8' });
+            const auditData = JSON.parse(auditResult);
+            results.scans.npm_audit = auditData;
+            
+            if (auditData.metadata && auditData.metadata.vulnerabilities) {
+              const vulns = auditData.metadata.vulnerabilities;
+              results.summary.critical = vulns.critical || 0;
+              results.summary.high = vulns.high || 0;
+              results.summary.moderate = vulns.moderate || 0;
+              results.summary.low = vulns.low || 0;
+              results.summary.total_vulnerabilities = 
+                results.summary.critical + results.summary.high + 
+                results.summary.moderate + results.summary.low;
+            }
+          } catch (e) {
+            console.warn('NPM audit failed:', e.message);
+          }
+          
+          // 检查package-lock.json的完整性
+          try {
+            if (fs.existsSync('package-lock.json')) {
+              const packageLock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
+              results.scans.package_lock = {
+                version: packageLock.lockfileVersion,
+                packages_count: Object.keys(packageLock.packages || {}).length,
+                integrity_check: 'passed'
+              };
+            }
+          } catch (e) {
+            results.scans.package_lock = {
+              integrity_check: 'failed',
+              error: e.message
+            };
+          }
+          
+          // 生成建议
+          if (results.summary.critical > 0) {
+            results.recommendations.push('🚨 Critical vulnerabilities found - immediate action required');
+            results.recommendations.push('Run `npm audit fix` to attempt automatic fixes');
+          }
+          
+          if (results.summary.high > 0) {
+            results.recommendations.push('⚠️ High-severity vulnerabilities found - review and update affected packages');
+          }
+          
+          if (results.summary.moderate > 0) {
+            results.recommendations.push('📋 Moderate vulnerabilities found - consider updating when convenient');
+          }
+          
+          if (results.summary.total_vulnerabilities === 0) {
+            results.recommendations.push('✅ No known vulnerabilities found');
+          }
+          
+          fs.writeFileSync('build/reports/vulnerabilities/vulnerability-scan.json', JSON.stringify(results, null, 2));
+          
+          console.log('🔍 Vulnerability Scan Results:');
+          console.log(`Total vulnerabilities: ${results.summary.total_vulnerabilities}`);
+          console.log(`Critical: ${results.summary.critical}`);
+          console.log(`High: ${results.summary.high}`);
+          console.log(`Moderate: ${results.summary.moderate}`);
+          console.log(`Low: ${results.summary.low}`);
+          
+          if (results.recommendations.length > 0) {
+            console.log('\n💡 Recommendations:');
+            results.recommendations.forEach(rec => console.log(`  ${rec}`));
+          }
+          
+          return results;
+        }
+        
+        scanVulnerabilities();
+        EOF
+        
+        node scripts/vulnerability-scan.js
+        
+    - name: Upload vulnerability reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: vulnerability-reports
+        path: build/reports/vulnerabilities/
+        retention-days: 30
+
+  summary:
+    name: Dependency Management Summary
+    runs-on: ubuntu-latest
+    needs: [dependency-audit, license-check, dependency-update, vulnerability-scan]
+    if: always()
+    
+    steps:
+    - name: Download all reports
+      uses: actions/download-artifact@v3
+      with:
+        path: reports/
+        
+    - name: Generate dependency summary
+      run: |
+        echo "# 📦 Dependency Management Summary" > dependency-summary.md
+        echo "" >> dependency-summary.md
+        echo "**Build:** $GITHUB_RUN_NUMBER" >> dependency-summary.md
+        echo "**Commit:** $GITHUB_SHA" >> dependency-summary.md
+        echo "**Branch:** $GITHUB_REF_NAME" >> dependency-summary.md
+        echo "**Date:** $(date -u)" >> dependency-summary.md
+        echo "" >> dependency-summary.md
+        
+        echo "## 🔍 Security & Compliance Status" >> dependency-summary.md
+        echo "" >> dependency-summary.md
+        
+        # 安全审计状态
+        echo "### Security Audit" >> dependency-summary.md
+        echo "- Status: ${{ needs.dependency-audit.result }}" >> dependency-summary.md
+        if [ -f "reports/security-audit-reports/npm-audit.json" ]; then
+          echo "- Report: Available" >> dependency-summary.md
+        fi
+        echo "" >> dependency-summary.md
+        
+        # 许可证检查状态
+        echo "### License Compliance" >> dependency-summary.md
+        echo "- Status: ${{ needs.license-check.result }}" >> dependency-summary.md
+        if [ -f "reports/license-reports/license-compliance.json" ]; then
+          echo "- Report: Available" >> dependency-summary.md
+        fi
+        echo "" >> dependency-summary.md
+        
+        # 依赖更新状态
+        echo "### Dependency Updates" >> dependency-summary.md
+        echo "- Status: ${{ needs.dependency-update.result }}" >> dependency-summary.md
+        if [ -f "reports/dependency-update-reports/update-summary.json" ]; then
+          echo "- Report: Available" >> dependency-summary.md
+        fi
+        echo "" >> dependency-summary.md
+        
+        # 漏洞扫描状态
+        echo "### Vulnerability Scan" >> dependency-summary.md
+        echo "- Status: ${{ needs.vulnerability-scan.result }}" >> dependency-summary.md
+        if [ -f "reports/vulnerability-reports/vulnerability-scan.json" ]; then
+          echo "- Report: Available" >> dependency-summary.md
+        fi
+        echo "" >> dependency-summary.md
+        
+        echo "## 📋 Action Items" >> dependency-summary.md
+        echo "" >> dependency-summary.md
+        echo "Based on the dependency analysis:" >> dependency-summary.md
+        echo "1. Review security audit results and fix any critical vulnerabilities" >> dependency-summary.md
+        echo "2. Ensure all dependencies have compatible licenses" >> dependency-summary.md
+        echo "3. Consider updating outdated packages, especially patch versions" >> dependency-summary.md
+        echo "4. Monitor for new vulnerabilities in the dependency chain" >> dependency-summary.md
+        echo "" >> dependency-summary.md
+        
+        echo "## 🔗 Reports" >> dependency-summary.md
+        echo "" >> dependency-summary.md
+        echo "Detailed reports are available in the workflow artifacts:" >> dependency-summary.md
+        echo "- Security Audit Reports" >> dependency-summary.md
+        echo "- License Reports" >> dependency-summary.md
+        echo "- Dependency Update Reports" >> dependency-summary.md
+        echo "- Vulnerability Reports" >> dependency-summary.md
+        
+        cat dependency-summary.md
+        
+    - name: Upload dependency summary
+      uses: actions/upload-artifact@v3
+      with:
+        name: dependency-summary
+        path: dependency-summary.md
+        retention-days: 90

@@ -1,0 +1,133 @@
+name: 用户反馈 / User Feedback
+description: 提供关于 MPLP 项目的用户反馈和建议 / Provide user feedback and suggestions for the MPLP project
+title: "[反馈/Feedback]: "
+labels: ["feedback", "user-request"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢您使用 Multi-Agent Project Lifecycle Protocol (MPLP)！您的反馈对我们非常重要。
+        
+        Thank you for using Multi-Agent Project Lifecycle Protocol (MPLP)! Your feedback is very important to us.
+        
+        请填写以下信息以帮助我们更好地理解您的需求和建议。
+        Please fill out the following information to help us better understand your needs and suggestions.
+
+  - type: dropdown
+    id: feedback-type
+    attributes:
+      label: 反馈类型 / Feedback Type
+      description: 请选择最符合您反馈的类型 / Please select the type that best matches your feedback
+      options:
+        - 功能请求 / Feature Request
+        - 错误报告 / Bug Report
+        - 文档改进 / Documentation Improvement
+        - 性能问题 / Performance Issue
+        - 可用性问题 / Usability Issue
+        - 集成问题 / Integration Issue
+        - 其他 / Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 优先级 / Priority
+      description: 这个问题对您的工作影响程度 / How much does this issue affect your work
+      options:
+        - 低 / Low - 不影响正常使用 / Does not affect normal usage
+        - 中 / Medium - 有一定影响但可以绕过 / Some impact but can work around
+        - 高 / High - 严重影响使用体验 / Seriously affects user experience
+        - 紧急 / Critical - 阻止正常使用 / Prevents normal usage
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: 相关组件 / Related Component
+      description: 您的反馈主要涉及哪个组件 / Which component does your feedback mainly relate to
+      options:
+        - 核心协议 / Core Protocol
+        - JSON Schema
+        - 文档系统 / Documentation System
+        - 工具链 / Toolchain
+        - 示例项目 / Example Projects
+        - 发布流程 / Release Process
+        - 监控系统 / Monitoring System
+        - 不确定 / Not Sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 详细描述 / Detailed Description
+      description: 请详细描述您的反馈、遇到的问题或建议 / Please describe your feedback, issues encountered, or suggestions in detail
+      placeholder: |
+        请包括以下信息（如适用）/ Please include the following information (if applicable):
+        
+        - 具体的使用场景 / Specific use case
+        - 期望的行为 / Expected behavior
+        - 实际的行为 / Actual behavior
+        - 重现步骤 / Steps to reproduce
+        - 任何错误消息 / Any error messages
+        - 建议的解决方案 / Suggested solution
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: 环境信息 / Environment Information
+      description: 请提供您的环境信息 / Please provide your environment information
+      placeholder: |
+        - 操作系统 / Operating System: (例如 / e.g., Windows 11, macOS 13, Ubuntu 22.04)
+        - Node.js 版本 / Node.js Version: (例如 / e.g., v18.17.0)
+        - MPLP 版本 / MPLP Version: (例如 / e.g., v1.0.0)
+        - 浏览器 / Browser: (如适用 / if applicable)
+        - 其他相关工具版本 / Other relevant tool versions:
+      render: markdown
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 附加信息 / Additional Context
+      description: 任何其他有助于我们理解您反馈的信息 / Any other information that helps us understand your feedback
+      placeholder: |
+        - 相关的日志文件 / Relevant log files
+        - 截图或录屏 / Screenshots or recordings
+        - 相关的配置文件 / Related configuration files
+        - 类似问题的链接 / Links to similar issues
+        - 您尝试过的解决方案 / Solutions you have tried
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: 确认 / Confirmation
+      description: 请确认以下事项 / Please confirm the following
+      options:
+        - label: 我已经搜索了现有的 Issues，确认这不是重复的反馈 / I have searched existing issues and confirmed this is not a duplicate
+          required: true
+        - label: 我理解这个反馈将被公开，并且可能被社区成员查看和讨论 / I understand this feedback will be public and may be viewed and discussed by community members
+          required: true
+        - label: 我愿意在需要时提供更多信息或参与讨论 / I am willing to provide more information or participate in discussions when needed
+          required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        
+        **感谢您的反馈！/ Thank you for your feedback!**
+        
+        我们会尽快审查您的反馈并回复。如果您的反馈被标记为高优先级或紧急，我们会优先处理。
+        
+        We will review your feedback and respond as soon as possible. If your feedback is marked as high priority or critical, we will prioritize it.
+        
+        **有用的链接 / Useful Links:**
+        - [项目文档 / Project Documentation](../docs/)
+        - [常见问题 / FAQ](../docs/FAQ.md)
+        - [贡献指南 / Contributing Guide](../CONTRIBUTING.md)
+        - [行为准则 / Code of Conduct](../CODE_OF_CONDUCT.md)

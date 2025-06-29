@@ -1,0 +1,925 @@
+name: Performance Testing & Monitoring
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # 每周日UTC时间04:00运行性能测试
+    - cron: '0 4 * * 0'
+  workflow_dispatch:
+    inputs:
+      performance_test_type:
+        description: 'Type of performance test to run'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+        - all
+        - schema-validation
+        - documentation-build
+        - file-operations
+
+jobs:
+  schema-performance:
+    name: Schema Validation Performance
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Create performance test directories
+      run: |
+        mkdir -p build/reports/performance
+        mkdir -p tests/performance
+        
+    - name: Create schema validation performance test
+      run: |
+        cat > tests/performance/schema-validation-perf.js << 'EOF'
+        const fs = require('fs');
+        const path = require('path');
+        const Ajv = require('ajv');
+        const addFormats = require('ajv-formats');
+        
+        class SchemaPerformanceTester {
+          constructor() {
+            this.ajv = new Ajv({ allErrors: true, verbose: true });
+            addFormats(this.ajv);
+            this.results = {
+              timestamp: new Date().toISOString(),
+              tests: [],
+              summary: {
+                total_schemas: 0,
+                total_examples: 0,
+                total_validations: 0,
+                avg_schema_compile_time: 0,
+                avg_validation_time: 0,
+                fastest_validation: Infinity,
+                slowest_validation: 0
+              }
+            };
+          }
+          
+          async loadSchemas() {
+            const schemasDir = path.join(process.cwd(), 'schemas');
+            if (!fs.existsSync(schemasDir)) {
+              throw new Error('Schemas directory not found');
+            }
+            
+            const schemaFiles = fs.readdirSync(schemasDir)
+              .filter(file => file.endsWith('.json'))
+              .filter(file => file !== 'index.json');
+            
+            const schemas = {};
+            
+            for (const file of schemaFiles) {
+              const schemaPath = path.join(schemasDir, file);
+              const schemaContent = fs.readFileSync(schemaPath, 'utf8');
+              
+              try {
+                schemas[file] = JSON.parse(schemaContent);
+              } catch (e) {
+                console.warn(`Failed to parse schema ${file}:`, e.message);
+              }
+            }
+            
+            return schemas;
+          }
+          
+          async loadExamples() {
+            const examplesDir = path.join(process.cwd(), 'examples');
+            if (!fs.existsSync(examplesDir)) {
+              return {};
+            }
+            
+            const exampleFiles = fs.readdirSync(examplesDir)
+              .filter(file => file.endsWith('.json'));
+            
+            const examples = {};
+            
+            for (const file of exampleFiles) {
+              const examplePath = path.join(examplesDir, file);
+              const exampleContent = fs.readFileSync(examplePath, 'utf8');
+              
+              try {
+                examples[file] = JSON.parse(exampleContent);
+              } catch (e) {
+                console.warn(`Failed to parse example ${file}:`, e.message);
+              }
+            }
+            
+            return examples;
+          }
+          
+          measureSchemaCompilation(schemaName, schema) {
+            const startTime = process.hrtime.bigint();
+            
+            try {
+              const validate = this.ajv.compile(schema);
+              const endTime = process.hrtime.bigint();
+              const duration = Number(endTime - startTime) / 1000000; // Convert to milliseconds
+              
+              return {
+                success: true,
+                duration,
+                validate
+              };
+            } catch (e) {
+              const endTime = process.hrtime.bigint();
+              const duration = Number(endTime - startTime) / 1000000;
+              
+              return {
+                success: false,
+                duration,
+                error: e.message
+              };
+            }
+          }
+          
+          measureValidation(validate, data) {
+            const startTime = process.hrtime.bigint();
+            
+            try {
+              const isValid = validate(data);
+              const endTime = process.hrtime.bigint();
+              const duration = Number(endTime - startTime) / 1000000;
+              
+              return {
+                success: true,
+                isValid,
+                duration,
+                errors: validate.errors
+              };
+            } catch (e) {
+              const endTime = process.hrtime.bigint();
+              const duration = Number(endTime - startTime) / 1000000;
+              
+              return {
+                success: false,
+                duration,
+                error: e.message
+              };
+            }
+          }
+          
+          async runPerformanceTests() {
+            console.log('🚀 Starting schema validation performance tests...');
+            
+            const schemas = await this.loadSchemas();
+            const examples = await this.loadExamples();
+            
+            this.results.summary.total_schemas = Object.keys(schemas).length;
+            this.results.summary.total_examples = Object.keys(examples).length;
+            
+            const compileTimes = [];
+            const validationTimes = [];
+            
+            // Test schema compilation performance
+            for (const [schemaName, schema] of Object.entries(schemas)) {
+              console.log(`Testing schema compilation: ${schemaName}`);
+              
+              const compileResult = this.measureSchemaCompilation(schemaName, schema);
+              compileTimes.push(compileResult.duration);
+              
+              const testResult = {
+                schema: schemaName,
+                compile_time: compileResult.duration,
+                compile_success: compileResult.success,
+                validations: []
+              };
+              
+              if (compileResult.success) {
+                // Test validation performance with examples
+                const relatedExamples = Object.entries(examples).filter(([exampleName]) => 
+                  exampleName.includes(schemaName.replace('.json', '')) ||
+                  schemaName.includes(exampleName.replace('.json', ''))
+                );
+                
+                for (const [exampleName, exampleData] of relatedExamples) {
+                  console.log(`  Testing validation: ${exampleName}`);
+                  
+                  const validationResult = this.measureValidation(compileResult.validate, exampleData);
+                  validationTimes.push(validationResult.duration);
+                  this.results.summary.total_validations++;
+                  
+                  testResult.validations.push({
+                    example: exampleName,
+                    validation_time: validationResult.duration,
+                    validation_success: validationResult.success,
+                    is_valid: validationResult.isValid,
+                    error_count: validationResult.errors ? validationResult.errors.length : 0
+                  });
+                }
+                
+                // Test with synthetic data for stress testing
+                const syntheticData = this.generateSyntheticData(schema);
+                for (let i = 0; i < 10; i++) {
+                  const validationResult = this.measureValidation(compileResult.validate, syntheticData);
+                  validationTimes.push(validationResult.duration);
+                  this.results.summary.total_validations++;
+                }
+              } else {
+                testResult.compile_error = compileResult.error;
+              }
+              
+              this.results.tests.push(testResult);
+            }
+            
+            // Calculate summary statistics
+            if (compileTimes.length > 0) {
+              this.results.summary.avg_schema_compile_time = 
+                compileTimes.reduce((a, b) => a + b, 0) / compileTimes.length;
+            }
+            
+            if (validationTimes.length > 0) {
+              this.results.summary.avg_validation_time = 
+                validationTimes.reduce((a, b) => a + b, 0) / validationTimes.length;
+              this.results.summary.fastest_validation = Math.min(...validationTimes);
+              this.results.summary.slowest_validation = Math.max(...validationTimes);
+            }
+            
+            return this.results;
+          }
+          
+          generateSyntheticData(schema) {
+            // Simple synthetic data generator based on schema type
+            if (schema.type === 'object') {
+              const obj = {};
+              if (schema.properties) {
+                Object.keys(schema.properties).forEach(key => {
+                  const prop = schema.properties[key];
+                  if (prop.type === 'string') {
+                    obj[key] = 'test-string';
+                  } else if (prop.type === 'number') {
+                    obj[key] = 42;
+                  } else if (prop.type === 'boolean') {
+                    obj[key] = true;
+                  } else if (prop.type === 'array') {
+                    obj[key] = ['test-item'];
+                  } else {
+                    obj[key] = null;
+                  }
+                });
+              }
+              return obj;
+            }
+            return {};
+          }
+          
+          generateReport() {
+            const report = {
+              ...this.results,
+              performance_analysis: {
+                schema_compilation: {
+                  status: this.results.summary.avg_schema_compile_time < 10 ? 'excellent' : 
+                         this.results.summary.avg_schema_compile_time < 50 ? 'good' : 'needs_improvement',
+                  recommendation: this.results.summary.avg_schema_compile_time > 50 ? 
+                    'Consider optimizing schema complexity' : 'Schema compilation performance is acceptable'
+                },
+                validation_performance: {
+                  status: this.results.summary.avg_validation_time < 1 ? 'excellent' : 
+                         this.results.summary.avg_validation_time < 5 ? 'good' : 'needs_improvement',
+                  recommendation: this.results.summary.avg_validation_time > 5 ? 
+                    'Consider optimizing validation logic or data structure' : 'Validation performance is acceptable'
+                }
+              }
+            };
+            
+            fs.writeFileSync('build/reports/performance/schema-validation-performance.json', 
+              JSON.stringify(report, null, 2));
+            
+            console.log('\n📊 Schema Validation Performance Results:');
+            console.log(`Total schemas tested: ${this.results.summary.total_schemas}`);
+            console.log(`Total validations performed: ${this.results.summary.total_validations}`);
+            console.log(`Average schema compile time: ${this.results.summary.avg_schema_compile_time.toFixed(2)}ms`);
+            console.log(`Average validation time: ${this.results.summary.avg_validation_time.toFixed(2)}ms`);
+            console.log(`Fastest validation: ${this.results.summary.fastest_validation.toFixed(2)}ms`);
+            console.log(`Slowest validation: ${this.results.summary.slowest_validation.toFixed(2)}ms`);
+            
+            return report;
+          }
+        }
+        
+        async function runSchemaPerformanceTest() {
+          const tester = new SchemaPerformanceTester();
+          
+          try {
+            await tester.runPerformanceTests();
+            const report = tester.generateReport();
+            
+            // Exit with error if performance is poor
+            if (report.performance_analysis.schema_compilation.status === 'needs_improvement' ||
+                report.performance_analysis.validation_performance.status === 'needs_improvement') {
+              console.log('\n⚠️ Performance issues detected. Please review the recommendations.');
+              process.exit(1);
+            }
+            
+            console.log('\n✅ Schema validation performance test completed successfully.');
+          } catch (e) {
+            console.error('❌ Schema performance test failed:', e.message);
+            process.exit(1);
+          }
+        }
+        
+        if (require.main === module) {
+          runSchemaPerformanceTest();
+        }
+        
+        module.exports = { SchemaPerformanceTester };
+        EOF
+        
+    - name: Run schema validation performance test
+      if: github.event.inputs.performance_test_type == 'all' || github.event.inputs.performance_test_type == 'schema-validation' || github.event.inputs.performance_test_type == ''
+      run: node tests/performance/schema-validation-perf.js
+      
+    - name: Upload schema performance reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: schema-performance-reports
+        path: build/reports/performance/
+        retention-days: 30
+
+  documentation-performance:
+    name: Documentation Build Performance
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Create documentation performance test
+      run: |
+        mkdir -p build/reports/performance
+        
+        cat > tests/performance/documentation-build-perf.js << 'EOF'
+        const fs = require('fs');
+        const path = require('path');
+        const { execSync } = require('child_process');
+        
+        class DocumentationPerformanceTester {
+          constructor() {
+            this.results = {
+              timestamp: new Date().toISOString(),
+              tests: [],
+              summary: {
+                total_build_time: 0,
+                schema_doc_generation_time: 0,
+                file_operations: {
+                  total_files_processed: 0,
+                  avg_file_processing_time: 0
+                }
+              }
+            };
+          }
+          
+          measureCommand(command, description) {
+            console.log(`🔄 ${description}...`);
+            const startTime = process.hrtime.bigint();
+            
+            try {
+              const output = execSync(command, { 
+                encoding: 'utf8',
+                stdio: ['pipe', 'pipe', 'pipe']
+              });
+              const endTime = process.hrtime.bigint();
+              const duration = Number(endTime - startTime) / 1000000;
+              
+              return {
+                success: true,
+                duration,
+                output: output.trim()
+              };
+            } catch (e) {
+              const endTime = process.hrtime.bigint();
+              const duration = Number(endTime - startTime) / 1000000;
+              
+              return {
+                success: false,
+                duration,
+                error: e.message,
+                output: e.stdout ? e.stdout.toString() : ''
+              };
+            }
+          }
+          
+          measureFileOperations() {
+            const operations = [];
+            const testFiles = [];
+            
+            // 收集需要处理的文件
+            if (fs.existsSync('schemas')) {
+              const schemaFiles = fs.readdirSync('schemas')
+                .filter(f => f.endsWith('.json'))
+                .map(f => path.join('schemas', f));
+              testFiles.push(...schemaFiles);
+            }
+            
+            if (fs.existsSync('examples')) {
+              const exampleFiles = fs.readdirSync('examples')
+                .filter(f => f.endsWith('.json'))
+                .map(f => path.join('examples', f));
+              testFiles.push(...exampleFiles);
+            }
+            
+            // 测试文件读取性能
+            for (const file of testFiles) {
+              const startTime = process.hrtime.bigint();
+              
+              try {
+                const content = fs.readFileSync(file, 'utf8');
+                JSON.parse(content); // 验证JSON格式
+                
+                const endTime = process.hrtime.bigint();
+                const duration = Number(endTime - startTime) / 1000000;
+                
+                operations.push({
+                  file,
+                  operation: 'read_and_parse',
+                  duration,
+                  success: true,
+                  size: content.length
+                });
+              } catch (e) {
+                const endTime = process.hrtime.bigint();
+                const duration = Number(endTime - startTime) / 1000000;
+                
+                operations.push({
+                  file,
+                  operation: 'read_and_parse',
+                  duration,
+                  success: false,
+                  error: e.message
+                });
+              }
+            }
+            
+            return operations;
+          }
+          
+          async runPerformanceTests() {
+            console.log('🚀 Starting documentation build performance tests...');
+            
+            // 测试Schema文档生成
+            if (fs.existsSync('package.json')) {
+              const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+              
+              if (packageJson.scripts && packageJson.scripts['generate:schema-docs']) {
+                const schemaDocResult = this.measureCommand(
+                  'npm run generate:schema-docs',
+                  'Generating schema documentation'
+                );
+                
+                this.results.tests.push({
+                  test: 'schema_documentation_generation',
+                  ...schemaDocResult
+                });
+                
+                if (schemaDocResult.success) {
+                  this.results.summary.schema_doc_generation_time = schemaDocResult.duration;
+                }
+              }
+            }
+            
+            // 测试文件操作性能
+            const fileOperations = this.measureFileOperations();
+            this.results.tests.push({
+              test: 'file_operations',
+              operations: fileOperations
+            });
+            
+            // 计算文件操作统计
+            const successfulOps = fileOperations.filter(op => op.success);
+            if (successfulOps.length > 0) {
+              this.results.summary.file_operations.total_files_processed = successfulOps.length;
+              this.results.summary.file_operations.avg_file_processing_time = 
+                successfulOps.reduce((sum, op) => sum + op.duration, 0) / successfulOps.length;
+            }
+            
+            // 测试完整构建（如果存在）
+            if (fs.existsSync('package.json')) {
+              const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+              
+              if (packageJson.scripts && packageJson.scripts['build:all']) {
+                const buildResult = this.measureCommand(
+                  'npm run build:all',
+                  'Running full build'
+                );
+                
+                this.results.tests.push({
+                  test: 'full_build',
+                  ...buildResult
+                });
+                
+                if (buildResult.success) {
+                  this.results.summary.total_build_time = buildResult.duration;
+                }
+              }
+            }
+            
+            return this.results;
+          }
+          
+          generateReport() {
+            const report = {
+              ...this.results,
+              performance_analysis: {
+                schema_documentation: {
+                  status: this.results.summary.schema_doc_generation_time < 5000 ? 'excellent' : 
+                         this.results.summary.schema_doc_generation_time < 15000 ? 'good' : 'needs_improvement',
+                  recommendation: this.results.summary.schema_doc_generation_time > 15000 ? 
+                    'Consider optimizing documentation generation process' : 'Documentation generation performance is acceptable'
+                },
+                file_operations: {
+                  status: this.results.summary.file_operations.avg_file_processing_time < 10 ? 'excellent' : 
+                         this.results.summary.file_operations.avg_file_processing_time < 50 ? 'good' : 'needs_improvement',
+                  recommendation: this.results.summary.file_operations.avg_file_processing_time > 50 ? 
+                    'Consider optimizing file I/O operations' : 'File processing performance is acceptable'
+                },
+                overall_build: {
+                  status: this.results.summary.total_build_time < 30000 ? 'excellent' : 
+                         this.results.summary.total_build_time < 60000 ? 'good' : 'needs_improvement',
+                  recommendation: this.results.summary.total_build_time > 60000 ? 
+                    'Consider optimizing build process or breaking it into smaller steps' : 'Build performance is acceptable'
+                }
+              }
+            };
+            
+            fs.writeFileSync('build/reports/performance/documentation-build-performance.json', 
+              JSON.stringify(report, null, 2));
+            
+            console.log('\n📊 Documentation Build Performance Results:');
+            console.log(`Schema documentation generation: ${this.results.summary.schema_doc_generation_time.toFixed(2)}ms`);
+            console.log(`Files processed: ${this.results.summary.file_operations.total_files_processed}`);
+            console.log(`Average file processing time: ${this.results.summary.file_operations.avg_file_processing_time.toFixed(2)}ms`);
+            console.log(`Total build time: ${this.results.summary.total_build_time.toFixed(2)}ms`);
+            
+            return report;
+          }
+        }
+        
+        async function runDocumentationPerformanceTest() {
+          const tester = new DocumentationPerformanceTester();
+          
+          try {
+            await tester.runPerformanceTests();
+            const report = tester.generateReport();
+            
+            console.log('\n✅ Documentation build performance test completed successfully.');
+          } catch (e) {
+            console.error('❌ Documentation performance test failed:', e.message);
+            process.exit(1);
+          }
+        }
+        
+        if (require.main === module) {
+          runDocumentationPerformanceTest();
+        }
+        
+        module.exports = { DocumentationPerformanceTester };
+        EOF
+        
+    - name: Run documentation build performance test
+      if: github.event.inputs.performance_test_type == 'all' || github.event.inputs.performance_test_type == 'documentation-build' || github.event.inputs.performance_test_type == ''
+      run: node tests/performance/documentation-build-perf.js
+      
+    - name: Upload documentation performance reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: documentation-performance-reports
+        path: build/reports/performance/
+        retention-days: 30
+
+  system-monitoring:
+    name: System Resource Monitoring
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Create system monitoring test
+      run: |
+        mkdir -p build/reports/performance
+        
+        cat > tests/performance/system-monitoring.js << 'EOF'
+        const fs = require('fs');
+        const os = require('os');
+        const { execSync } = require('child_process');
+        
+        class SystemMonitor {
+          constructor() {
+            this.results = {
+              timestamp: new Date().toISOString(),
+              system_info: {
+                platform: os.platform(),
+                arch: os.arch(),
+                node_version: process.version,
+                total_memory: os.totalmem(),
+                free_memory: os.freemem(),
+                cpu_count: os.cpus().length
+              },
+              monitoring_data: {
+                memory_usage: [],
+                cpu_usage: [],
+                disk_usage: null,
+                network_stats: null
+              },
+              performance_metrics: {
+                peak_memory_usage: 0,
+                avg_memory_usage: 0,
+                memory_efficiency: 'unknown'
+              }
+            };
+          }
+          
+          getMemoryUsage() {
+            const usage = process.memoryUsage();
+            return {
+              timestamp: Date.now(),
+              rss: usage.rss,
+              heapTotal: usage.heapTotal,
+              heapUsed: usage.heapUsed,
+              external: usage.external,
+              arrayBuffers: usage.arrayBuffers
+            };
+          }
+          
+          getCPUUsage() {
+            const cpus = os.cpus();
+            const usage = cpus.map(cpu => {
+              const total = Object.values(cpu.times).reduce((acc, time) => acc + time, 0);
+              const idle = cpu.times.idle;
+              return {
+                model: cpu.model,
+                usage_percent: ((total - idle) / total * 100).toFixed(2)
+              };
+            });
+            
+            return {
+              timestamp: Date.now(),
+              cpus: usage,
+              load_average: os.loadavg()
+            };
+          }
+          
+          getDiskUsage() {
+            try {
+              const output = execSync('df -h /', { encoding: 'utf8' });
+              const lines = output.trim().split('\n');
+              if (lines.length > 1) {
+                const parts = lines[1].split(/\s+/);
+                return {
+                  filesystem: parts[0],
+                  size: parts[1],
+                  used: parts[2],
+                  available: parts[3],
+                  use_percent: parts[4]
+                };
+              }
+            } catch (e) {
+              console.warn('Could not get disk usage:', e.message);
+            }
+            return null;
+          }
+          
+          async monitorDuringOperation(operation, duration = 10000) {
+            console.log(`🔍 Monitoring system resources during: ${operation}`);
+            
+            const startTime = Date.now();
+            const interval = 1000; // Monitor every second
+            const monitoringPromise = new Promise((resolve) => {
+              const monitor = setInterval(() => {
+                this.results.monitoring_data.memory_usage.push(this.getMemoryUsage());
+                this.results.monitoring_data.cpu_usage.push(this.getCPUUsage());
+                
+                if (Date.now() - startTime >= duration) {
+                  clearInterval(monitor);
+                  resolve();
+                }
+              }, interval);
+            });
+            
+            // Get initial disk usage
+            this.results.monitoring_data.disk_usage = this.getDiskUsage();
+            
+            // Wait for monitoring to complete
+            await monitoringPromise;
+            
+            // Calculate performance metrics
+            this.calculatePerformanceMetrics();
+          }
+          
+          calculatePerformanceMetrics() {
+            const memoryReadings = this.results.monitoring_data.memory_usage;
+            
+            if (memoryReadings.length > 0) {
+              const heapUsages = memoryReadings.map(reading => reading.heapUsed);
+              this.results.performance_metrics.peak_memory_usage = Math.max(...heapUsages);
+              this.results.performance_metrics.avg_memory_usage = 
+                heapUsages.reduce((sum, usage) => sum + usage, 0) / heapUsages.length;
+              
+              // Calculate memory efficiency
+              const totalMemory = this.results.system_info.total_memory;
+              const peakUsagePercent = (this.results.performance_metrics.peak_memory_usage / totalMemory) * 100;
+              
+              if (peakUsagePercent < 10) {
+                this.results.performance_metrics.memory_efficiency = 'excellent';
+              } else if (peakUsagePercent < 25) {
+                this.results.performance_metrics.memory_efficiency = 'good';
+              } else if (peakUsagePercent < 50) {
+                this.results.performance_metrics.memory_efficiency = 'moderate';
+              } else {
+                this.results.performance_metrics.memory_efficiency = 'poor';
+              }
+            }
+          }
+          
+          async runSystemTests() {
+            console.log('🚀 Starting system resource monitoring...');
+            
+            // Monitor during test execution
+            await this.monitorDuringOperation('test execution', 15000);
+            
+            return this.results;
+          }
+          
+          generateReport() {
+            const report = {
+              ...this.results,
+              analysis: {
+                memory_analysis: {
+                  peak_usage_mb: (this.results.performance_metrics.peak_memory_usage / 1024 / 1024).toFixed(2),
+                  avg_usage_mb: (this.results.performance_metrics.avg_memory_usage / 1024 / 1024).toFixed(2),
+                  efficiency: this.results.performance_metrics.memory_efficiency,
+                  recommendation: this.results.performance_metrics.memory_efficiency === 'poor' ? 
+                    'Consider optimizing memory usage or increasing available memory' : 
+                    'Memory usage is within acceptable limits'
+                },
+                system_health: {
+                  status: this.results.performance_metrics.memory_efficiency === 'poor' ? 'warning' : 'healthy',
+                  total_memory_gb: (this.results.system_info.total_memory / 1024 / 1024 / 1024).toFixed(2),
+                  cpu_cores: this.results.system_info.cpu_count
+                }
+              }
+            };
+            
+            fs.writeFileSync('build/reports/performance/system-monitoring.json', 
+              JSON.stringify(report, null, 2));
+            
+            console.log('\n📊 System Monitoring Results:');
+            console.log(`Platform: ${this.results.system_info.platform} (${this.results.system_info.arch})`);
+            console.log(`Node.js version: ${this.results.system_info.node_version}`);
+            console.log(`Total memory: ${(this.results.system_info.total_memory / 1024 / 1024 / 1024).toFixed(2)} GB`);
+            console.log(`CPU cores: ${this.results.system_info.cpu_count}`);
+            console.log(`Peak memory usage: ${report.analysis.memory_analysis.peak_usage_mb} MB`);
+            console.log(`Average memory usage: ${report.analysis.memory_analysis.avg_usage_mb} MB`);
+            console.log(`Memory efficiency: ${this.results.performance_metrics.memory_efficiency}`);
+            
+            return report;
+          }
+        }
+        
+        async function runSystemMonitoring() {
+          const monitor = new SystemMonitor();
+          
+          try {
+            await monitor.runSystemTests();
+            const report = monitor.generateReport();
+            
+            console.log('\n✅ System monitoring completed successfully.');
+          } catch (e) {
+            console.error('❌ System monitoring failed:', e.message);
+            process.exit(1);
+          }
+        }
+        
+        if (require.main === module) {
+          runSystemMonitoring();
+        }
+        
+        module.exports = { SystemMonitor };
+        EOF
+        
+    - name: Run system monitoring
+      run: node tests/performance/system-monitoring.js
+      
+    - name: Upload system monitoring reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: system-monitoring-reports
+        path: build/reports/performance/
+        retention-days: 30
+
+  performance-summary:
+    name: Performance Summary
+    runs-on: ubuntu-latest
+    needs: [schema-performance, documentation-performance, system-monitoring]
+    if: always()
+    
+    steps:
+    - name: Download all performance reports
+      uses: actions/download-artifact@v3
+      with:
+        path: reports/
+        
+    - name: Generate performance summary
+      run: |
+        echo "# 🚀 Performance Testing Summary" > performance-summary.md
+        echo "" >> performance-summary.md
+        echo "**Build:** $GITHUB_RUN_NUMBER" >> performance-summary.md
+        echo "**Commit:** $GITHUB_SHA" >> performance-summary.md
+        echo "**Branch:** $GITHUB_REF_NAME" >> performance-summary.md
+        echo "**Date:** $(date -u)" >> performance-summary.md
+        echo "" >> performance-summary.md
+        
+        echo "## 📊 Performance Test Results" >> performance-summary.md
+        echo "" >> performance-summary.md
+        
+        # Schema性能测试结果
+        echo "### Schema Validation Performance" >> performance-summary.md
+        echo "- Status: ${{ needs.schema-performance.result }}" >> performance-summary.md
+        if [ -f "reports/schema-performance-reports/schema-validation-performance.json" ]; then
+          echo "- Detailed report available in artifacts" >> performance-summary.md
+        fi
+        echo "" >> performance-summary.md
+        
+        # 文档构建性能结果
+        echo "### Documentation Build Performance" >> performance-summary.md
+        echo "- Status: ${{ needs.documentation-performance.result }}" >> performance-summary.md
+        if [ -f "reports/documentation-performance-reports/documentation-build-performance.json" ]; then
+          echo "- Detailed report available in artifacts" >> performance-summary.md
+        fi
+        echo "" >> performance-summary.md
+        
+        # 系统监控结果
+        echo "### System Resource Monitoring" >> performance-summary.md
+        echo "- Status: ${{ needs.system-monitoring.result }}" >> performance-summary.md
+        if [ -f "reports/system-monitoring-reports/system-monitoring.json" ]; then
+          echo "- Detailed report available in artifacts" >> performance-summary.md
+        fi
+        echo "" >> performance-summary.md
+        
+        echo "## 🎯 Performance Recommendations" >> performance-summary.md
+        echo "" >> performance-summary.md
+        echo "Based on the performance analysis:" >> performance-summary.md
+        echo "" >> performance-summary.md
+        echo "### Schema Validation" >> performance-summary.md
+        echo "- Monitor schema compilation times for complex schemas" >> performance-summary.md
+        echo "- Consider caching compiled schemas for repeated validations" >> performance-summary.md
+        echo "- Optimize schema structure if validation times exceed 5ms" >> performance-summary.md
+        echo "" >> performance-summary.md
+        echo "### Documentation Build" >> performance-summary.md
+        echo "- Monitor documentation generation times" >> performance-summary.md
+        echo "- Consider incremental builds for large documentation sets" >> performance-summary.md
+        echo "- Optimize file I/O operations if processing times are high" >> performance-summary.md
+        echo "" >> performance-summary.md
+        echo "### System Resources" >> performance-summary.md
+        echo "- Monitor memory usage patterns" >> performance-summary.md
+        echo "- Consider memory optimization if usage exceeds 50% of available memory" >> performance-summary.md
+        echo "- Scale resources if CPU usage consistently exceeds 80%" >> performance-summary.md
+        echo "" >> performance-summary.md
+        
+        echo "## 📈 Trending" >> performance-summary.md
+        echo "" >> performance-summary.md
+        echo "Track performance trends over time:" >> performance-summary.md
+        echo "- Compare current results with previous builds" >> performance-summary.md
+        echo "- Identify performance regressions early" >> performance-summary.md
+        echo "- Set up alerts for significant performance degradation" >> performance-summary.md
+        
+        cat performance-summary.md
+        
+    - name: Upload performance summary
+      uses: actions/upload-artifact@v3
+      with:
+        name: performance-summary
+        path: performance-summary.md
+        retention-days: 90

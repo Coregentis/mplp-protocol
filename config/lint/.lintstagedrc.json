@@ -1,0 +1,26 @@
+{
+  "*.{js,mjs,cjs}": [
+    "eslint --fix",
+    "prettier --write"
+  ],
+  "*.{json,yaml,yml}": [
+    "prettier --write"
+  ],
+  "*.md": [
+    "markdownlint --fix",
+    "prettier --write"
+  ],
+  "package.json": [
+    "npm run audit:fix",
+    "prettier --write"
+  ],
+  "*.{json,js,mjs,cjs}": [
+    "npm run validate:schema"
+  ],
+  "examples/**/*": [
+    "npm run validate:examples"
+  ],
+  "schemas/**/*.json": [
+    "npm run validate:schema"
+  ]
+}

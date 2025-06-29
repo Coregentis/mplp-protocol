@@ -1,0 +1,263 @@
+{
+  "approval_matrix": {
+    "patch": {
+      "staging": {
+        "required_approvers": 1,
+        "approver_groups": ["developers", "qa"],
+        "auto_approve_conditions": {
+          "security_score": ">= 95",
+          "test_coverage": ">= 80",
+          "vulnerability_count": "== 0"
+        }
+      },
+      "production": {
+        "required_approvers": 2,
+        "approver_groups": ["tech_leads", "product_owners"],
+        "mandatory_approvers": ["security_team"],
+        "auto_approve_conditions": {
+          "security_score": ">= 98",
+          "test_coverage": ">= 90",
+          "vulnerability_count": "== 0",
+          "staging_deployment_success": true
+        }
+      }
+    },
+    "minor": {
+      "staging": {
+        "required_approvers": 2,
+        "approver_groups": ["tech_leads", "qa"],
+        "mandatory_approvers": ["architecture_team"],
+        "auto_approve_conditions": {
+          "security_score": ">= 96",
+          "test_coverage": ">= 85",
+          "vulnerability_count": "== 0",
+          "compatibility_score": ">= 95"
+        }
+      },
+      "production": {
+        "required_approvers": 3,
+        "approver_groups": ["tech_leads", "product_owners", "architecture_team"],
+        "mandatory_approvers": ["security_team", "cto"],
+        "auto_approve_conditions": {
+          "security_score": ">= 99",
+          "test_coverage": ">= 95",
+          "vulnerability_count": "== 0",
+          "compatibility_score": ">= 98",
+          "staging_deployment_success": true,
+          "performance_regression": "< 5%"
+        }
+      }
+    },
+    "major": {
+      "staging": {
+        "required_approvers": 3,
+        "approver_groups": ["tech_leads", "architecture_team", "product_owners"],
+        "mandatory_approvers": ["security_team", "cto"],
+        "auto_approve_conditions": {
+          "security_score": ">= 98",
+          "test_coverage": ">= 90",
+          "vulnerability_count": "== 0",
+          "compatibility_score": ">= 90",
+          "breaking_changes_documented": true
+        }
+      },
+      "production": {
+        "required_approvers": 4,
+        "approver_groups": ["tech_leads", "product_owners", "architecture_team", "executive_team"],
+        "mandatory_approvers": ["security_team", "cto", "ceo"],
+        "auto_approve_conditions": {
+          "security_score": ">= 99",
+          "test_coverage": ">= 95",
+          "vulnerability_count": "== 0",
+          "compatibility_score": ">= 95",
+          "staging_deployment_success": true,
+          "performance_regression": "< 3%",
+          "breaking_changes_documented": true,
+          "migration_plan_approved": true
+        }
+      }
+    }
+  },
+  "approver_groups": {
+    "developers": {
+      "members": ["@dev-team"],
+      "description": "Core development team members",
+      "permissions": ["approve_patch", "approve_hotfix"]
+    },
+    "qa": {
+      "members": ["@qa-team"],
+      "description": "Quality assurance team",
+      "permissions": ["approve_patch", "approve_minor"]
+    },
+    "tech_leads": {
+      "members": ["@tech-leads"],
+      "description": "Technical leadership team",
+      "permissions": ["approve_patch", "approve_minor", "approve_major"]
+    },
+    "architecture_team": {
+      "members": ["@architects"],
+      "description": "System architecture team",
+      "permissions": ["approve_minor", "approve_major", "approve_breaking_changes"]
+    },
+    "security_team": {
+      "members": ["@security"],
+      "description": "Security and compliance team",
+      "permissions": ["approve_security", "approve_production"],
+      "mandatory_for": ["production", "security_changes"]
+    },
+    "product_owners": {
+      "members": ["@product-team"],
+      "description": "Product management team",
+      "permissions": ["approve_minor", "approve_major", "approve_feature_changes"]
+    },
+    "executive_team": {
+      "members": ["@executives"],
+      "description": "Executive leadership",
+      "permissions": ["approve_major", "approve_strategic_changes"]
+    },
+    "cto": {
+      "members": ["@cto"],
+      "description": "Chief Technology Officer",
+      "permissions": ["approve_all"],
+      "mandatory_for": ["major_production"]
+    },
+    "ceo": {
+      "members": ["@ceo"],
+      "description": "Chief Executive Officer",
+      "permissions": ["approve_all"],
+      "mandatory_for": ["major_production", "strategic_changes"]
+    }
+  },
+  "approval_rules": {
+    "timeout": {
+      "patch": "24h",
+      "minor": "48h",
+      "major": "72h"
+    },
+    "escalation": {
+      "enabled": true,
+      "escalation_time": "50%",
+      "escalation_chain": [
+        "tech_leads",
+        "architecture_team",
+        "cto",
+        "ceo"
+      ]
+    },
+    "emergency_override": {
+      "enabled": true,
+      "authorized_roles": ["cto", "ceo"],
+      "requires_justification": true,
+      "audit_trail": true,
+      "post_approval_review": true
+    },
+    "auto_approval": {
+      "enabled": true,
+      "conditions_must_all_pass": true,
+      "bypass_manual_approval": false,
+      "audit_trail": true
+    },
+    "rejection_handling": {
+      "allow_resubmission": true,
+      "require_changes_documentation": true,
+      "cooling_period": "1h",
+      "max_resubmissions": 3
+    }
+  },
+  "notification_settings": {
+    "approval_request": {
+      "channels": ["slack", "email"],
+      "recipients": ["approver_groups", "release_manager"],
+      "template": "approval_request"
+    },
+    "approval_granted": {
+      "channels": ["slack", "email"],
+      "recipients": ["all_stakeholders"],
+      "template": "approval_granted"
+    },
+    "approval_rejected": {
+      "channels": ["slack", "email"],
+      "recipients": ["requester", "tech_leads"],
+      "template": "approval_rejected"
+    },
+    "timeout_warning": {
+      "channels": ["slack"],
+      "recipients": ["approver_groups", "escalation_chain"],
+      "template": "timeout_warning",
+      "trigger_at": "75%"
+    },
+    "emergency_override": {
+      "channels": ["slack", "email", "sms"],
+      "recipients": ["all_stakeholders", "audit_team"],
+      "template": "emergency_override"
+    }
+  },
+  "audit_settings": {
+    "log_all_actions": true,
+    "include_metadata": true,
+    "retention_period": "7y",
+    "compliance_reporting": {
+      "enabled": true,
+      "frequency": "monthly",
+      "recipients": ["compliance_team", "audit_team"]
+    },
+    "approval_metrics": {
+      "track_approval_time": true,
+      "track_rejection_rate": true,
+      "track_auto_approval_rate": true,
+      "generate_reports": true
+    }
+  },
+  "integration_settings": {
+    "github": {
+      "use_protected_branches": true,
+      "require_status_checks": true,
+      "dismiss_stale_reviews": true,
+      "require_code_owner_reviews": true
+    },
+    "slack": {
+      "webhook_url": "${SLACK_WEBHOOK_URL}",
+      "channel": "#releases",
+      "mention_approvers": true
+    },
+    "email": {
+      "smtp_server": "${SMTP_SERVER}",
+      "from_address": "releases@company.com",
+      "template_path": "./templates/email/"
+    },
+    "jira": {
+      "enabled": false,
+      "create_approval_tickets": false,
+      "link_to_release": false
+    }
+  },
+  "security_settings": {
+    "require_2fa": true,
+    "ip_whitelist": [],
+    "session_timeout": "30m",
+    "audit_approval_access": true,
+    "encrypt_approval_data": true
+  },
+  "templates": {
+    "approval_request": {
+      "subject": "🚀 Release Approval Required: {{version}} ({{type}})",
+      "body": "A new {{type}} release ({{version}}) is pending your approval.\n\nRelease Details:\n- Version: {{version}}\n- Type: {{type}}\n- Environment: {{environment}}\n- Security Score: {{security_score}}\n- Test Coverage: {{test_coverage}}\n- Vulnerabilities: {{vulnerability_count}}\n\nPlease review and approve at: {{approval_url}}"
+    },
+    "approval_granted": {
+      "subject": "✅ Release Approved: {{version}}",
+      "body": "Release {{version}} has been approved and is proceeding to deployment.\n\nApproved by: {{approver}}\nApproval time: {{approval_time}}\nNext step: {{next_step}}"
+    },
+    "approval_rejected": {
+      "subject": "❌ Release Rejected: {{version}}",
+      "body": "Release {{version}} has been rejected.\n\nRejected by: {{rejector}}\nReason: {{rejection_reason}}\nRequired changes: {{required_changes}}\n\nPlease address the issues and resubmit."
+    },
+    "timeout_warning": {
+      "subject": "⏰ Release Approval Timeout Warning: {{version}}",
+      "body": "Release {{version}} approval is approaching timeout.\n\nTime remaining: {{time_remaining}}\nPending approvers: {{pending_approvers}}\n\nPlease review urgently: {{approval_url}}"
+    },
+    "emergency_override": {
+      "subject": "🚨 Emergency Release Override: {{version}}",
+      "body": "EMERGENCY: Release {{version}} has been approved via emergency override.\n\nOverride by: {{override_by}}\nJustification: {{justification}}\nTimestamp: {{timestamp}}\n\nThis action has been logged for audit purposes."
+    }
+  }
+}

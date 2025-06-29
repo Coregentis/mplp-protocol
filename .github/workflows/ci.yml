@@ -1,0 +1,442 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # 每天UTC时间02:00运行
+    - cron: '0 2 * * *'
+  workflow_call:
+    inputs:
+      skip_deployment:
+        description: 'Skip deployment workflows'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [16.x, 18.x, 20.x]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Create build directories
+      run: |
+        mkdir -p build/reports/coverage
+        mkdir -p build/reports/tests
+        
+    - name: Validate examples
+      run: npm run validate:examples
+      
+    - name: Run unit tests
+      run: npm run test:unit -- --coverage
+      
+    - name: Run integration tests
+      run: npm run test:integration
+      
+    - name: Upload coverage to Codecov
+      if: matrix.node-version == '18.x'
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./build/reports/coverage/lcov.info
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+        
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results-node-${{ matrix.node-version }}
+        path: |
+          build/reports/
+          jest-html-reporters-attach/
+        retention-days: 30
+
+  lint:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Check JSON Schema validity
+      run: |
+        find schemas -name "*.json" -exec node -e "JSON.parse(require('fs').readFileSync('{}', 'utf8'))" \;
+        
+    - name: Check documentation consistency
+      run: |
+        # 检查所有语言版本的文档是否存在
+        for lang in en zh tw; do
+          if [ -d "docs/$lang" ]; then
+            echo "✓ Found documentation for language: $lang"
+          else
+            echo "✗ Missing documentation for language: $lang"
+            exit 1
+          fi
+        done
+        
+    - name: Validate package.json
+      run: |
+        node -e "JSON.parse(require('fs').readFileSync('package.json', 'utf8'))"
+        npm ls --depth=0
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run security audit
+      run: npm audit --audit-level=moderate
+      
+    - name: Check for sensitive files
+      run: |
+        # 检查是否意外提交了敏感文件
+        if find . -name "*.key" -o -name "*.pem" -o -name ".env" | grep -v node_modules | grep -q .; then
+          echo "✗ Found potential sensitive files"
+          find . -name "*.key" -o -name "*.pem" -o -name ".env" | grep -v node_modules
+          exit 1
+        else
+          echo "✓ No sensitive files found"
+        fi
+
+  documentation:
+    name: Documentation Build
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Generate schema documentation
+      run: npm run generate:schema-docs
+      
+    - name: Check documentation generation
+      run: |
+        if [ -d "docs/schema" ]; then
+          echo "✓ Schema documentation generated successfully"
+          ls -la docs/schema/
+        else
+          echo "✗ Schema documentation generation failed"
+          exit 1
+        fi
+        
+    - name: Upload documentation artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: generated-docs
+        path: docs/schema/
+        retention-days: 7
+
+  compatibility:
+    name: Compatibility Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Validate compatibility matrix
+      run: |
+        if [ -f "scripts/update-compatibility-matrix.js" ]; then
+          npm run compatibility:validate
+        else
+          echo "⚠️ Compatibility matrix script not found, skipping"
+        fi
+        
+    - name: Check frozen integrity
+      run: |
+        if [ -f "scripts/check-frozen-integrity.js" ]; then
+          npm run check:frozen
+        else
+          echo "⚠️ Frozen integrity script not found, skipping"
+        fi
+
+  build:
+    name: Build Verification
+    runs-on: ubuntu-latest
+    needs: [test, lint, security, documentation]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run full build
+      run: |
+        if npm run build:all; then
+          echo "✅ Build completed successfully"
+        else
+          echo "❌ Build failed"
+          exit 1
+        fi
+        
+    - name: Verify build artifacts
+      run: |
+        echo "📦 Checking build artifacts..."
+        
+        # 检查必要的目录和文件
+        required_paths=(
+          "build"
+          "docs/schema"
+          "schemas"
+          "examples"
+        )
+        
+        for path in "${required_paths[@]}"; do
+          if [ -e "$path" ]; then
+            echo "✓ Found: $path"
+          else
+            echo "✗ Missing: $path"
+            exit 1
+          fi
+        done
+        
+        echo "✅ All required artifacts present"
+        
+    - name: Package for release
+      if: github.ref == 'refs/heads/main'
+      run: |
+        # 创建发布包
+        mkdir -p dist
+        
+        # 复制核心文件
+        cp -r schemas dist/
+        cp -r examples dist/
+        cp -r docs dist/
+        cp package.json dist/
+        cp README.md dist/
+        cp LICENSE dist/ 2>/dev/null || echo "No LICENSE file found"
+        
+        # 创建版本信息
+        echo "{
+  \"version\": \"$(node -p \"require('./package.json').version\")\",
+  \"build_date\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",
+  \"commit\": \"$GITHUB_SHA\",
+  \"branch\": \"$GITHUB_REF_NAME\"
+}" > dist/build-info.json
+        
+        echo "📦 Release package created"
+        
+    - name: Upload build artifacts
+      if: github.ref == 'refs/heads/main'
+      uses: actions/upload-artifact@v3
+      with:
+        name: release-package
+        path: dist/
+        retention-days: 90
+
+  trigger-enhanced-workflows:
+    name: Trigger Enhanced CI/CD Workflows
+    runs-on: ubuntu-latest
+    needs: [test, lint, security, documentation, compatibility, build]
+    if: success() && github.event.inputs.skip_deployment != 'true'
+    
+    steps:
+    - name: Call Schema Validation Workflow
+      uses: ./.github/workflows/schema-validate.yml
+      
+    - name: Call Example Validation Workflow
+      uses: ./.github/workflows/validate-examples.yml
+      
+    - name: Call Commit Validation Workflow
+      uses: ./.github/workflows/commit-validation.yml
+      
+    - name: Call Version Management Workflow
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: ./.github/workflows/version-management.yml
+      
+    - name: Call Documentation Management Workflow
+      if: |
+        contains(github.event.head_commit.message, 'docs:') ||
+        github.event_name == 'pull_request' ||
+        github.event_name == 'schedule'
+      uses: ./.github/workflows/docs-management.yml
+      
+    - name: Trigger code quality workflow
+      if: github.event_name == 'push' || github.event_name == 'pull_request'
+      run: |
+        echo "🔍 Code quality workflow will be triggered automatically"
+        echo "This includes ESLint analysis, complexity analysis, and documentation quality checks"
+        
+    - name: Trigger dependency management workflow
+      if: github.event_name == 'push' || github.event_name == 'schedule'
+      run: |
+        echo "📦 Dependency management workflow will be triggered automatically"
+        echo "This includes security audits, license compliance, and dependency updates"
+        
+    - name: Trigger performance monitoring
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        echo "⚡ Performance monitoring workflow will be triggered automatically"
+        echo "This includes schema validation performance, documentation build performance, and system monitoring"
+        
+    - name: Trigger deployment workflow
+      if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+      run: |
+        echo "🚀 Deployment workflow will be triggered automatically"
+        echo "Target environment will be determined based on branch/tag"
+        echo "  - main branch: staging deployment"
+        echo "  - release tags: production deployment"
+
+  notify:
+    name: Notify Build Status
+    runs-on: ubuntu-latest
+    needs: [test, lint, security, documentation, compatibility, build, trigger-enhanced-workflows]
+    if: always()
+    
+    steps:
+    - name: Collect workflow results
+      id: results
+      run: |
+        echo "test_result=${{ needs.test.result }}" >> $GITHUB_OUTPUT
+        echo "lint_result=${{ needs.lint.result }}" >> $GITHUB_OUTPUT
+        echo "security_result=${{ needs.security.result }}" >> $GITHUB_OUTPUT
+        echo "documentation_result=${{ needs.documentation.result }}" >> $GITHUB_OUTPUT
+        echo "compatibility_result=${{ needs.compatibility.result }}" >> $GITHUB_OUTPUT
+        echo "build_result=${{ needs.build.result }}" >> $GITHUB_OUTPUT
+        echo "enhanced_workflows_result=${{ needs.trigger-enhanced-workflows.result }}" >> $GITHUB_OUTPUT
+        
+    - name: Generate comprehensive status report
+      run: |
+        echo "📊 CI Pipeline Status Report"
+        echo "================================"
+        echo "Build Number: ${{ github.run_number }}"
+        echo "Commit: ${{ github.sha }}"
+        echo "Branch/Tag: ${{ github.ref_name }}"
+        echo "Event: ${{ github.event_name }}"
+        echo "Workflow: ${{ github.workflow }}"
+        echo ""
+        echo "📋 Job Results:"
+        echo "  Tests: ${{ steps.results.outputs.test_result }}"
+        echo "  Lint: ${{ steps.results.outputs.lint_result }}"
+        echo "  Security: ${{ steps.results.outputs.security_result }}"
+        echo "  Documentation: ${{ steps.results.outputs.documentation_result }}"
+        echo "  Compatibility: ${{ steps.results.outputs.compatibility_result }}"
+        echo "  Build: ${{ steps.results.outputs.build_result }}"
+        echo "  Enhanced Workflows: ${{ steps.results.outputs.enhanced_workflows_result }}"
+        echo ""
+        
+        # Determine overall status
+        FAILED_JOBS=""
+        if [[ "${{ steps.results.outputs.test_result }}" == "failure" ]]; then
+          FAILED_JOBS="$FAILED_JOBS Tests"
+        fi
+        if [[ "${{ steps.results.outputs.lint_result }}" == "failure" ]]; then
+          FAILED_JOBS="$FAILED_JOBS Lint"
+        fi
+        if [[ "${{ steps.results.outputs.security_result }}" == "failure" ]]; then
+          FAILED_JOBS="$FAILED_JOBS Security"
+        fi
+        if [[ "${{ steps.results.outputs.documentation_result }}" == "failure" ]]; then
+          FAILED_JOBS="$FAILED_JOBS Documentation"
+        fi
+        if [[ "${{ steps.results.outputs.compatibility_result }}" == "failure" ]]; then
+          FAILED_JOBS="$FAILED_JOBS Compatibility"
+        fi
+        if [[ "${{ steps.results.outputs.build_result }}" == "failure" ]]; then
+          FAILED_JOBS="$FAILED_JOBS Build"
+        fi
+        
+        if [[ -z "$FAILED_JOBS" ]]; then
+          echo "✅ Overall Status: SUCCESS"
+          echo "All CI pipeline jobs completed successfully!"
+          echo ""
+          echo "🚀 Next Steps:"
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "  - Staging deployment will be triggered automatically"
+            echo "  - Performance monitoring will run"
+            echo "  - Code quality analysis will be performed"
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "  - Production deployment will be triggered automatically"
+            echo "  - Release will be created"
+          else
+            echo "  - Enhanced workflows will run for code quality and security"
+          fi
+        else
+          echo "❌ Overall Status: FAILURE"
+          echo "Failed jobs:$FAILED_JOBS"
+          echo ""
+          echo "🔧 Action Required:"
+          echo "  - Review failed job logs"
+          echo "  - Fix identified issues"
+          echo "  - Re-run the pipeline"
+        fi
+        
+    - name: Notify success
+      if: success()
+      run: |
+        echo "✅ CI Pipeline completed successfully!"
+        echo "All quality gates passed - ready for next stage"
+        
+    - name: Notify failure
+      if: failure()
+      run: |
+        echo "❌ CI Pipeline failed!"
+        echo "Please review the job logs and fix the issues before proceeding"

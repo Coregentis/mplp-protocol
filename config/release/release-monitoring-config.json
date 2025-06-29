@@ -1,0 +1,467 @@
+{
+  "monitoring": {
+    "health_checks": {
+      "enabled": true,
+      "interval": "30s",
+      "timeout": "10s",
+      "retries": 3,
+      "endpoints": [
+        {
+          "name": "api_health",
+          "url": "/health",
+          "method": "GET",
+          "expected_status": 200,
+          "expected_response": {
+            "status": "healthy"
+          },
+          "critical": true
+        },
+        {
+          "name": "api_ready",
+          "url": "/ready",
+          "method": "GET",
+          "expected_status": 200,
+          "critical": true
+        },
+        {
+          "name": "schema_validation",
+          "url": "/api/v1/schema/validate",
+          "method": "POST",
+          "payload": {
+            "schema": "basic_test"
+          },
+          "expected_status": 200,
+          "critical": false
+        }
+      ]
+    },
+    "performance_metrics": {
+      "enabled": true,
+      "collection_interval": "60s",
+      "metrics": [
+        {
+          "name": "response_time",
+          "type": "histogram",
+          "threshold": {
+            "warning": "500ms",
+            "critical": "2s"
+          },
+          "percentiles": [50, 90, 95, 99]
+        },
+        {
+          "name": "error_rate",
+          "type": "counter",
+          "threshold": {
+            "warning": "1%",
+            "critical": "5%"
+          },
+          "window": "5m"
+        },
+        {
+          "name": "throughput",
+          "type": "gauge",
+          "threshold": {
+            "warning": "-20%",
+            "critical": "-50%"
+          },
+          "baseline": "previous_release"
+        },
+        {
+          "name": "memory_usage",
+          "type": "gauge",
+          "threshold": {
+            "warning": "80%",
+            "critical": "95%"
+          }
+        },
+        {
+          "name": "cpu_usage",
+          "type": "gauge",
+          "threshold": {
+            "warning": "70%",
+            "critical": "90%"
+          }
+        }
+      ]
+    },
+    "business_metrics": {
+      "enabled": true,
+      "collection_interval": "300s",
+      "metrics": [
+        {
+          "name": "schema_validation_success_rate",
+          "type": "percentage",
+          "threshold": {
+            "warning": "95%",
+            "critical": "90%"
+          },
+          "window": "10m"
+        },
+        {
+          "name": "api_usage_rate",
+          "type": "counter",
+          "threshold": {
+            "warning": "-30%",
+            "critical": "-60%"
+          },
+          "baseline": "previous_week"
+        },
+        {
+          "name": "user_satisfaction_score",
+          "type": "gauge",
+          "threshold": {
+            "warning": "4.0",
+            "critical": "3.5"
+          },
+          "source": "feedback_api"
+        }
+      ]
+    },
+    "log_monitoring": {
+      "enabled": true,
+      "log_levels": ["ERROR", "WARN", "FATAL"],
+      "patterns": [
+        {
+          "name": "critical_errors",
+          "pattern": "(FATAL|CRITICAL|EMERGENCY)",
+          "threshold": {
+            "warning": 1,
+            "critical": 5
+          },
+          "window": "5m"
+        },
+        {
+          "name": "authentication_failures",
+          "pattern": "(auth|authentication).*(fail|error|denied)",
+          "threshold": {
+            "warning": 10,
+            "critical": 50
+          },
+          "window": "10m"
+        },
+        {
+          "name": "database_errors",
+          "pattern": "(database|db|sql).*(error|exception|timeout)",
+          "threshold": {
+            "warning": 5,
+            "critical": 20
+          },
+          "window": "5m"
+        }
+      ]
+    }
+  },
+  "alerting": {
+    "channels": {
+      "slack": {
+        "enabled": true,
+        "webhook_url": "${SLACK_MONITORING_WEBHOOK}",
+        "channel": "#alerts",
+        "severity_mapping": {
+          "critical": "@channel",
+          "warning": "@here",
+          "info": ""
+        }
+      },
+      "email": {
+        "enabled": true,
+        "smtp_server": "${SMTP_SERVER}",
+        "recipients": {
+          "critical": ["oncall@company.com", "tech-leads@company.com"],
+          "warning": ["dev-team@company.com"],
+          "info": ["monitoring@company.com"]
+        }
+      },
+      "pagerduty": {
+        "enabled": false,
+        "integration_key": "${PAGERDUTY_INTEGRATION_KEY}",
+        "severity_mapping": {
+          "critical": "critical",
+          "warning": "warning",
+          "info": "info"
+        }
+      }
+    },
+    "rules": [
+      {
+        "name": "health_check_failure",
+        "condition": "health_checks.critical == false",
+        "severity": "critical",
+        "message": "Critical health check failed: {{check_name}}",
+        "cooldown": "5m"
+      },
+      {
+        "name": "high_error_rate",
+        "condition": "error_rate > critical_threshold",
+        "severity": "critical",
+        "message": "Error rate exceeded critical threshold: {{error_rate}}%",
+        "cooldown": "10m"
+      },
+      {
+        "name": "performance_degradation",
+        "condition": "response_time.p95 > critical_threshold",
+        "severity": "warning",
+        "message": "Performance degradation detected: P95 response time {{response_time}}ms",
+        "cooldown": "15m"
+      },
+      {
+        "name": "resource_exhaustion",
+        "condition": "memory_usage > 90% OR cpu_usage > 85%",
+        "severity": "critical",
+        "message": "Resource exhaustion detected: Memory {{memory_usage}}%, CPU {{cpu_usage}}%",
+        "cooldown": "5m"
+      }
+    ]
+  },
+  "rollback": {
+    "triggers": {
+      "automatic": {
+        "enabled": true,
+        "conditions": [
+          {
+            "name": "critical_health_check_failure",
+            "condition": "health_checks.critical_failures >= 3",
+            "window": "5m",
+            "action": "immediate_rollback"
+          },
+          {
+            "name": "high_error_rate",
+            "condition": "error_rate > 10%",
+            "window": "10m",
+            "action": "staged_rollback"
+          },
+          {
+            "name": "performance_regression",
+            "condition": "response_time.p95 > baseline * 3",
+            "window": "15m",
+            "action": "staged_rollback"
+          },
+          {
+            "name": "business_metric_failure",
+            "condition": "schema_validation_success_rate < 80%",
+            "window": "20m",
+            "action": "staged_rollback"
+          }
+        ],
+        "confirmation_required": false,
+        "notification_delay": "30s"
+      },
+      "manual": {
+        "enabled": true,
+        "authorized_roles": ["tech_leads", "oncall_engineer", "release_manager"],
+        "require_justification": true,
+        "confirmation_required": true,
+        "approval_timeout": "10m"
+      }
+    },
+    "strategies": {
+      "immediate_rollback": {
+        "description": "Immediate rollback to previous version",
+        "steps": [
+          {
+            "name": "stop_traffic",
+            "action": "redirect_traffic",
+            "target": "maintenance_page",
+            "timeout": "30s"
+          },
+          {
+            "name": "rollback_deployment",
+            "action": "deploy_previous_version",
+            "timeout": "5m"
+          },
+          {
+            "name": "verify_rollback",
+            "action": "run_health_checks",
+            "timeout": "2m"
+          },
+          {
+            "name": "restore_traffic",
+            "action": "redirect_traffic",
+            "target": "application",
+            "timeout": "30s"
+          }
+        ],
+        "total_timeout": "10m"
+      },
+      "staged_rollback": {
+        "description": "Gradual rollback with traffic shifting",
+        "steps": [
+          {
+            "name": "reduce_traffic",
+            "action": "shift_traffic",
+            "percentage": 50,
+            "timeout": "2m"
+          },
+          {
+            "name": "monitor_metrics",
+            "action": "wait_and_monitor",
+            "duration": "5m"
+          },
+          {
+            "name": "complete_rollback",
+            "action": "shift_traffic",
+            "percentage": 0,
+            "timeout": "3m"
+          },
+          {
+            "name": "verify_rollback",
+            "action": "run_health_checks",
+            "timeout": "2m"
+          }
+        ],
+        "total_timeout": "15m"
+      },
+      "blue_green_rollback": {
+        "description": "Blue-green deployment rollback",
+        "steps": [
+          {
+            "name": "switch_to_blue",
+            "action": "switch_environment",
+            "target": "blue",
+            "timeout": "1m"
+          },
+          {
+            "name": "verify_blue_environment",
+            "action": "run_health_checks",
+            "timeout": "2m"
+          },
+          {
+            "name": "cleanup_green",
+            "action": "cleanup_environment",
+            "target": "green",
+            "timeout": "5m"
+          }
+        ],
+        "total_timeout": "10m"
+      }
+    },
+    "post_rollback": {
+      "actions": [
+        {
+          "name": "incident_creation",
+          "action": "create_incident",
+          "severity": "high",
+          "assignee": "oncall_engineer"
+        },
+        {
+          "name": "stakeholder_notification",
+          "action": "send_notification",
+          "channels": ["slack", "email"],
+          "recipients": ["tech_leads", "product_owners", "executives"]
+        },
+        {
+          "name": "post_mortem_scheduling",
+          "action": "schedule_post_mortem",
+          "within": "24h",
+          "attendees": ["release_team", "oncall_engineer", "tech_leads"]
+        },
+        {
+          "name": "metrics_collection",
+          "action": "collect_rollback_metrics",
+          "duration": "1h"
+        }
+      ]
+    }
+  },
+  "canary_deployment": {
+    "enabled": true,
+    "stages": [
+      {
+        "name": "canary_1",
+        "traffic_percentage": 5,
+        "duration": "10m",
+        "success_criteria": {
+          "error_rate": "< 1%",
+          "response_time_p95": "< 1s",
+          "health_checks": "all_passing"
+        }
+      },
+      {
+        "name": "canary_2",
+        "traffic_percentage": 25,
+        "duration": "20m",
+        "success_criteria": {
+          "error_rate": "< 0.5%",
+          "response_time_p95": "< 800ms",
+          "health_checks": "all_passing",
+          "business_metrics": "within_baseline"
+        }
+      },
+      {
+        "name": "canary_3",
+        "traffic_percentage": 50,
+        "duration": "30m",
+        "success_criteria": {
+          "error_rate": "< 0.3%",
+          "response_time_p95": "< 600ms",
+          "health_checks": "all_passing",
+          "business_metrics": "within_baseline",
+          "user_feedback": "> 4.0"
+        }
+      },
+      {
+        "name": "full_deployment",
+        "traffic_percentage": 100,
+        "duration": "ongoing",
+        "success_criteria": {
+          "error_rate": "< 0.1%",
+          "response_time_p95": "< 500ms",
+          "health_checks": "all_passing",
+          "business_metrics": "within_baseline"
+        }
+      }
+    ],
+    "failure_handling": {
+      "auto_rollback": true,
+      "rollback_strategy": "immediate_rollback",
+      "notification_required": true
+    }
+  },
+  "dashboards": {
+    "release_monitoring": {
+      "url": "https://monitoring.company.com/release-dashboard",
+      "panels": [
+        "health_checks",
+        "performance_metrics",
+        "error_rates",
+        "business_metrics",
+        "deployment_status"
+      ]
+    },
+    "rollback_status": {
+      "url": "https://monitoring.company.com/rollback-dashboard",
+      "panels": [
+        "rollback_triggers",
+        "rollback_history",
+        "recovery_time",
+        "impact_metrics"
+      ]
+    }
+  },
+  "reporting": {
+    "release_report": {
+      "enabled": true,
+      "frequency": "per_release",
+      "recipients": ["release_team", "tech_leads", "product_owners"],
+      "include": [
+        "deployment_metrics",
+        "performance_comparison",
+        "error_analysis",
+        "rollback_events",
+        "lessons_learned"
+      ]
+    },
+    "monthly_summary": {
+      "enabled": true,
+      "frequency": "monthly",
+      "recipients": ["executives", "engineering_managers"],
+      "include": [
+        "release_velocity",
+        "success_rate",
+        "rollback_frequency",
+        "performance_trends",
+        "improvement_recommendations"
+      ]
+    }
+  }
+}

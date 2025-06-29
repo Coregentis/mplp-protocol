@@ -1,0 +1,435 @@
+name: Documentation Management
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'docs/**'
+      - 'schemas/**'
+      - 'dev/protocols/**'
+      - 'scripts/docs-*.js'
+      - 'scripts/*docs*.js'
+      - 'config/docs-*.js'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'docs/**'
+      - 'schemas/**'
+      - 'dev/protocols/**'
+      - 'scripts/docs-*.js'
+      - 'scripts/*docs*.js'
+      - 'config/docs-*.js'
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        default: 'full-check'
+        type: choice
+        options:
+          - 'full-check'
+          - 'quality-check'
+          - 'sync-docs'
+          - 'version-update'
+          - 'generate-report'
+      target_language:
+        description: 'Target language for operations'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - 'all'
+          - 'zh'
+          - 'en'
+          - 'tw'
+          - 'jp'
+          - 'kr'
+
+jobs:
+  docs-version-control:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    outputs:
+      docs-changed: ${{ steps.detect-changes.outputs.docs-changed }}
+      version-updated: ${{ steps.version-check.outputs.version-updated }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Detect documentation changes
+        id: detect-changes
+        run: |
+          if git diff --name-only HEAD~1 HEAD | grep -E '^(docs|schemas|dev/protocols)/' > /dev/null; then
+            echo "docs-changed=true" >> $GITHUB_OUTPUT
+            echo "Documentation changes detected"
+          else
+            echo "docs-changed=false" >> $GITHUB_OUTPUT
+            echo "No documentation changes detected"
+          fi
+
+      - name: Initialize docs version manager
+        if: steps.detect-changes.outputs.docs-changed == 'true'
+        run: node scripts/docs-version-manager.js init
+
+      - name: Check version status
+        id: version-check
+        if: steps.detect-changes.outputs.docs-changed == 'true'
+        run: |
+          VERSION_STATUS=$(node scripts/docs-version-manager.js status --format=json | jq -r '.needsUpdate')
+          echo "version-updated=$VERSION_STATUS" >> $GITHUB_OUTPUT
+          echo "Version update needed: $VERSION_STATUS"
+
+      - name: Generate change report
+        if: steps.detect-changes.outputs.docs-changed == 'true'
+        run: |
+          node scripts/docs-version-manager.js detect-changes --output=docs-changes.json
+          echo "## Documentation Changes Report" >> $GITHUB_STEP_SUMMARY
+          node scripts/docs-version-manager.js report --format=markdown >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload change report
+        if: steps.detect-changes.outputs.docs-changed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-change-report
+          path: docs-changes.json
+          retention-days: 30
+
+  docs-quality-check:
+    runs-on: ubuntu-latest
+    needs: docs-version-control
+    if: needs.docs-version-control.outputs.docs-changed == 'true' || github.event.inputs.action == 'quality-check' || github.event.inputs.action == 'full-check'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run documentation quality check
+        run: |
+          node scripts/docs-quality-monitor.js check --output=quality-report.json
+          echo "## Documentation Quality Report" >> $GITHUB_STEP_SUMMARY
+          node scripts/docs-quality-monitor.js report --format=markdown >> $GITHUB_STEP_SUMMARY
+
+      - name: Check quality thresholds
+        run: |
+          QUALITY_SCORE=$(node scripts/docs-quality-monitor.js check --format=json | jq -r '.overallScore')
+          THRESHOLD=80
+          if (( $(echo "$QUALITY_SCORE < $THRESHOLD" | bc -l) )); then
+            echo "❌ Documentation quality score ($QUALITY_SCORE) is below threshold ($THRESHOLD)"
+            exit 1
+          else
+            echo "✅ Documentation quality score ($QUALITY_SCORE) meets threshold ($THRESHOLD)"
+          fi
+
+      - name: Upload quality report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-quality-report
+          path: quality-report.json
+          retention-days: 30
+
+  docs-sync-check:
+    runs-on: ubuntu-latest
+    needs: docs-version-control
+    if: needs.docs-version-control.outputs.docs-changed == 'true' || github.event.inputs.action == 'sync-docs' || github.event.inputs.action == 'full-check'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check documentation sync status
+        run: |
+          TARGET_LANG="${{ github.event.inputs.target_language || 'all' }}"
+          if [ "$TARGET_LANG" = "all" ]; then
+            node scripts/docs-sync-enhanced.js status --output=sync-status.json
+          else
+            node scripts/docs-sync-enhanced.js status --language=$TARGET_LANG --output=sync-status.json
+          fi
+          echo "## Documentation Sync Status" >> $GITHUB_STEP_SUMMARY
+          node scripts/docs-sync-enhanced.js status --format=markdown >> $GITHUB_STEP_SUMMARY
+
+      - name: Perform sync if needed
+        run: |
+          SYNC_NEEDED=$(jq -r '.syncNeeded' sync-status.json)
+          if [ "$SYNC_NEEDED" = "true" ]; then
+            echo "🔄 Synchronization needed, performing sync..."
+            TARGET_LANG="${{ github.event.inputs.target_language || 'all' }}"
+            if [ "$TARGET_LANG" = "all" ]; then
+              node scripts/docs-sync-enhanced.js sync --verify
+            else
+              node scripts/docs-sync-enhanced.js sync --language=$TARGET_LANG --verify
+            fi
+          else
+            echo "✅ Documentation is already in sync"
+          fi
+
+      - name: Upload sync report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-sync-report
+          path: sync-status.json
+          retention-days: 30
+
+  docs-structure-validation:
+    runs-on: ubuntu-latest
+    needs: docs-version-control
+    if: needs.docs-version-control.outputs.docs-changed == 'true' || github.event.inputs.action == 'full-check'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate documentation structure
+        run: |
+          echo "## Documentation Structure Validation" >> $GITHUB_STEP_SUMMARY
+          
+          # Check required directories
+          REQUIRED_DIRS=("docs/en" "docs/zh" "docs/tw" "docs/schemas" "schemas")
+          for dir in "${REQUIRED_DIRS[@]}"; do
+            if [ -d "$dir" ]; then
+              echo "✅ $dir exists" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "❌ $dir missing" >> $GITHUB_STEP_SUMMARY
+              exit 1
+            fi
+          done
+          
+          # Check schema-docs consistency
+          node scripts/docs-version-manager.js validate-structure --output=structure-report.json
+          
+          # Check for orphaned files
+          echo "### Orphaned Files Check" >> $GITHUB_STEP_SUMMARY
+          find docs -name "*.md" -type f | while read file; do
+            basename=$(basename "$file" .md)
+            if [ ! -f "schemas/${basename}.schema.json" ] && [ "$basename" != "README" ]; then
+              echo "⚠️ Potential orphaned file: $file" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+
+      - name: Upload structure report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-structure-report
+          path: structure-report.json
+          retention-days: 30
+
+  docs-performance-check:
+    runs-on: ubuntu-latest
+    needs: docs-version-control
+    if: needs.docs-version-control.outputs.docs-changed == 'true' || github.event.inputs.action == 'full-check'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Measure documentation build performance
+        run: |
+          echo "## Documentation Build Performance" >> $GITHUB_STEP_SUMMARY
+          
+          # Measure schema docs generation time
+          START_TIME=$(date +%s%N)
+          node scripts/generate-schema-docs.js
+          END_TIME=$(date +%s%N)
+          SCHEMA_TIME=$(( (END_TIME - START_TIME) / 1000000 ))
+          echo "📊 Schema docs generation: ${SCHEMA_TIME}ms" >> $GITHUB_STEP_SUMMARY
+          
+          # Measure docs sync time
+          START_TIME=$(date +%s%N)
+          node scripts/duplicate-docs-to-languages.js
+          END_TIME=$(date +%s%N)
+          SYNC_TIME=$(( (END_TIME - START_TIME) / 1000000 ))
+          echo "📊 Docs synchronization: ${SYNC_TIME}ms" >> $GITHUB_STEP_SUMMARY
+          
+          # Check performance thresholds
+          if [ $SCHEMA_TIME -gt 10000 ]; then
+            echo "⚠️ Schema docs generation is slow (>${SCHEMA_TIME}ms)" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ $SYNC_TIME -gt 5000 ]; then
+            echo "⚠️ Docs synchronization is slow (>${SYNC_TIME}ms)" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  generate-comprehensive-report:
+    runs-on: ubuntu-latest
+    needs: [docs-version-control, docs-quality-check, docs-sync-check, docs-structure-validation, docs-performance-check]
+    if: always() && (needs.docs-version-control.outputs.docs-changed == 'true' || github.event.inputs.action == 'generate-report' || github.event.inputs.action == 'full-check')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download all reports
+        uses: actions/download-artifact@v4
+        with:
+          path: reports/
+
+      - name: Generate comprehensive documentation report
+        run: |
+          mkdir -p reports/comprehensive
+          
+          # Create comprehensive report
+          cat > reports/comprehensive/docs-management-report.md << 'EOF'
+          # Documentation Management Report
+          
+          **Generated:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          **Workflow:** ${{ github.workflow }}
+          **Run ID:** ${{ github.run_id }}
+          **Commit:** ${{ github.sha }}
+          
+          ## Summary
+          
+          EOF
+          
+          # Add job statuses
+          echo "### Job Results" >> reports/comprehensive/docs-management-report.md
+          echo "- Version Control: ${{ needs.docs-version-control.result }}" >> reports/comprehensive/docs-management-report.md
+          echo "- Quality Check: ${{ needs.docs-quality-check.result }}" >> reports/comprehensive/docs-management-report.md
+          echo "- Sync Check: ${{ needs.docs-sync-check.result }}" >> reports/comprehensive/docs-management-report.md
+          echo "- Structure Validation: ${{ needs.docs-structure-validation.result }}" >> reports/comprehensive/docs-management-report.md
+          echo "- Performance Check: ${{ needs.docs-performance-check.result }}" >> reports/comprehensive/docs-management-report.md
+          echo "" >> reports/comprehensive/docs-management-report.md
+          
+          # Combine individual reports if they exist
+          if [ -f "reports/docs-change-report/docs-changes.json" ]; then
+            echo "### Change Detection" >> reports/comprehensive/docs-management-report.md
+            node scripts/docs-version-manager.js report --input=reports/docs-change-report/docs-changes.json --format=markdown >> reports/comprehensive/docs-management-report.md
+            echo "" >> reports/comprehensive/docs-management-report.md
+          fi
+          
+          if [ -f "reports/docs-quality-report/quality-report.json" ]; then
+            echo "### Quality Analysis" >> reports/comprehensive/docs-management-report.md
+            node scripts/docs-quality-monitor.js report --input=reports/docs-quality-report/quality-report.json --format=markdown >> reports/comprehensive/docs-management-report.md
+            echo "" >> reports/comprehensive/docs-management-report.md
+          fi
+          
+          if [ -f "reports/docs-sync-report/sync-status.json" ]; then
+            echo "### Synchronization Status" >> reports/comprehensive/docs-management-report.md
+            node scripts/docs-sync-enhanced.js report --input=reports/docs-sync-report/sync-status.json --format=markdown >> reports/comprehensive/docs-management-report.md
+            echo "" >> reports/comprehensive/docs-management-report.md
+          fi
+          
+          # Add recommendations
+          echo "### Recommendations" >> reports/comprehensive/docs-management-report.md
+          node scripts/docs-quality-monitor.js recommendations --format=markdown >> reports/comprehensive/docs-management-report.md
+
+      - name: Upload comprehensive report
+        uses: actions/upload-artifact@v4
+        with:
+          name: comprehensive-docs-report
+          path: reports/comprehensive/
+          retention-days: 90
+
+      - name: Comment on PR (if applicable)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const reportPath = 'reports/comprehensive/docs-management-report.md';
+            
+            if (fs.existsSync(reportPath)) {
+              const report = fs.readFileSync(reportPath, 'utf8');
+              
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `## 📚 Documentation Management Report\n\n${report}`
+              });
+            }
+
+  update-docs-version:
+    runs-on: ubuntu-latest
+    needs: [docs-version-control, docs-quality-check, docs-sync-check]
+    if: |
+      always() && 
+      needs.docs-version-control.outputs.version-updated == 'true' && 
+      needs.docs-quality-check.result == 'success' && 
+      needs.docs-sync-check.result == 'success' && 
+      (github.event.inputs.action == 'version-update' || github.event.inputs.action == 'full-check')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Update documentation version
+        run: |
+          node scripts/docs-version-manager.js update --auto-commit
+          echo "📝 Documentation version updated" >> $GITHUB_STEP_SUMMARY
+
+      - name: Commit version update
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          if git diff --quiet; then
+            echo "No changes to commit"
+          else
+            git add .
+            git commit -m "docs: update documentation version [skip ci]"
+            git push
+          fi

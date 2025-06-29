@@ -1,0 +1,502 @@
+name: Project Monitoring
+
+# 监控工作流 - 定期运行项目健康检查和监控
+on:
+  schedule:
+    # 每天 UTC 时间 02:00 运行 (北京时间 10:00)
+    - cron: '0 2 * * *'
+  
+  # 手动触发
+  workflow_dispatch:
+    inputs:
+      monitoring_type:
+        description: 'Type of monitoring to run'
+        required: true
+        default: 'full'
+        type: choice
+        options:
+          - full
+          - documentation
+          - schema
+          - feedback
+          - dashboard
+      
+      generate_reports:
+        description: 'Generate detailed reports'
+        required: false
+        default: true
+        type: boolean
+  
+  # 在推送到主分支时运行
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'docs/**'
+      - 'schemas/**'
+      - 'tools/monitoring/**'
+      - '.github/workflows/monitoring.yml'
+  
+  # 在 PR 时运行基础检查
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'docs/**'
+      - 'schemas/**'
+      - 'tools/monitoring/**'
+
+jobs:
+  # 文档质量监控
+  documentation-monitoring:
+    name: Documentation Quality Check
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.monitoring_type == 'full' || github.event.inputs.monitoring_type == 'documentation' || github.event_name != 'workflow_dispatch' }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 获取完整历史用于趋势分析
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: |
+          npm install --production
+          # 安装监控工具依赖
+          cd tools/monitoring
+          npm install || echo "No package.json found, using system dependencies"
+      
+      - name: Run documentation quality check
+        run: |
+          echo "🔍 Running documentation quality monitoring..."
+          node tools/monitoring/doc-quality-monitor.js
+        continue-on-error: true
+      
+      - name: Upload documentation report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: documentation-report
+          path: |
+            reports/doc-quality-report.json
+            reports/doc-quality-summary.md
+          retention-days: 30
+      
+      - name: Comment PR with documentation status
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const reportPath = 'reports/doc-quality-summary.md';
+            
+            if (fs.existsSync(reportPath)) {
+              const report = fs.readFileSync(reportPath, 'utf8');
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `## 📚 Documentation Quality Report\n\n${report}`
+              });
+            }
+
+  # Schema 影响分析
+  schema-monitoring:
+    name: Schema Impact Analysis
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.monitoring_type == 'full' || github.event.inputs.monitoring_type == 'schema' || github.event_name != 'workflow_dispatch' }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: |
+          npm install --production
+          cd tools/monitoring
+          npm install || echo "No package.json found, using system dependencies"
+      
+      - name: Run schema impact analysis
+        run: |
+          echo "🔧 Running schema impact analysis..."
+          node tools/monitoring/schema-impact-analyzer.js
+        continue-on-error: true
+      
+      - name: Upload schema report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: schema-report
+          path: |
+            reports/schema-impact-report.json
+            reports/schema-impact-summary.md
+          retention-days: 30
+      
+      - name: Check for breaking changes
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "🔍 Checking for breaking schema changes..."
+          if [ -f "reports/schema-impact-report.json" ]; then
+            # 检查是否有破坏性变更
+            BREAKING_CHANGES=$(node -e "
+              const report = require('./reports/schema-impact-report.json');
+              const breaking = report.compatibilityIssues?.filter(issue => issue.severity === 'breaking') || [];
+              console.log(breaking.length);
+            ")
+            
+            if [ "$BREAKING_CHANGES" -gt "0" ]; then
+              echo "⚠️ Breaking schema changes detected!"
+              echo "breaking_changes=true" >> $GITHUB_ENV
+            else
+              echo "✅ No breaking schema changes detected."
+              echo "breaking_changes=false" >> $GITHUB_ENV
+            fi
+          fi
+      
+      - name: Comment PR with schema analysis
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const reportPath = 'reports/schema-impact-summary.md';
+            
+            if (fs.existsSync(reportPath)) {
+              const report = fs.readFileSync(reportPath, 'utf8');
+              const breakingChanges = process.env.breaking_changes === 'true';
+              
+              const header = breakingChanges 
+                ? '## ⚠️ Schema Impact Analysis - Breaking Changes Detected'
+                : '## 🔧 Schema Impact Analysis';
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `${header}\n\n${report}`
+              });
+            }
+
+  # 用户反馈处理
+  feedback-monitoring:
+    name: Feedback Processing
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.monitoring_type == 'full' || github.event.inputs.monitoring_type == 'feedback' || github.event_name != 'workflow_dispatch' }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: |
+          npm install --production
+          cd tools/monitoring
+          npm install || echo "No package.json found, using system dependencies"
+      
+      - name: Process feedback
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "💬 Processing user feedback..."
+          node tools/monitoring/feedback-processor.js
+        continue-on-error: true
+      
+      - name: Upload feedback report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: feedback-report
+          path: |
+            reports/feedback-report.json
+            reports/feedback-report-summary.md
+            reports/feedback-report.csv
+          retention-days: 30
+      
+      - name: Check for urgent feedback
+        run: |
+          if [ -f "reports/feedback-report.json" ]; then
+            CRITICAL_COUNT=$(node -e "
+              const report = require('./reports/feedback-report.json');
+              const critical = report.summary?.byPriority?.critical || 0;
+              console.log(critical);
+            ")
+            
+            HIGH_COUNT=$(node -e "
+              const report = require('./reports/feedback-report.json');
+              const high = report.summary?.byPriority?.high || 0;
+              console.log(high);
+            ")
+            
+            echo "critical_feedback=$CRITICAL_COUNT" >> $GITHUB_ENV
+            echo "high_priority_feedback=$HIGH_COUNT" >> $GITHUB_ENV
+            
+            if [ "$CRITICAL_COUNT" -gt "0" ] || [ "$HIGH_COUNT" -gt "5" ]; then
+              echo "urgent_feedback=true" >> $GITHUB_ENV
+            else
+              echo "urgent_feedback=false" >> $GITHUB_ENV
+            fi
+          fi
+
+  # 生成监控仪表板
+  dashboard-generation:
+    name: Generate Monitoring Dashboard
+    runs-on: ubuntu-latest
+    needs: [documentation-monitoring, schema-monitoring, feedback-monitoring]
+    if: always() && (github.event.inputs.monitoring_type == 'full' || github.event.inputs.monitoring_type == 'dashboard' || github.event_name != 'workflow_dispatch')
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: |
+          npm install --production
+          cd tools/monitoring
+          npm install || echo "No package.json found, using system dependencies"
+      
+      - name: Download all reports
+        uses: actions/download-artifact@v4
+        with:
+          path: reports/
+        continue-on-error: true
+      
+      - name: Organize reports
+        run: |
+          # 整理下载的报告文件
+          find reports/ -name "*.json" -o -name "*.md" -o -name "*.csv" | while read file; do
+            if [ -f "$file" ]; then
+              cp "$file" "reports/" 2>/dev/null || true
+            fi
+          done
+      
+      - name: Generate monitoring dashboard
+        run: |
+          echo "📊 Generating monitoring dashboard..."
+          node tools/monitoring/monitoring-dashboard.js
+        continue-on-error: true
+      
+      - name: Upload dashboard
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: monitoring-dashboard
+          path: |
+            reports/dashboard.html
+            reports/dashboard.json
+            reports/dashboard-summary.md
+          retention-days: 30
+      
+      - name: Deploy dashboard to GitHub Pages
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: reports
+          destination_dir: monitoring
+          keep_files: true
+
+  # 发送通知和告警
+  notifications:
+    name: Send Notifications
+    runs-on: ubuntu-latest
+    needs: [documentation-monitoring, schema-monitoring, feedback-monitoring, dashboard-generation]
+    if: always() && github.event_name != 'pull_request'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Download dashboard report
+        uses: actions/download-artifact@v4
+        with:
+          name: monitoring-dashboard
+          path: reports/
+        continue-on-error: true
+      
+      - name: Analyze monitoring results
+        run: |
+          echo "📋 Analyzing monitoring results..."
+          
+          # 检查仪表板报告
+          if [ -f "reports/dashboard.json" ]; then
+            HEALTH_SCORE=$(node -e "
+              const report = require('./reports/dashboard.json');
+              console.log(report.projectHealth?.score || 0);
+            ")
+            
+            ALERT_COUNT=$(node -e "
+              const report = require('./reports/dashboard.json');
+              console.log(report.trends?.alerts?.length || 0);
+            ")
+            
+            echo "health_score=$HEALTH_SCORE" >> $GITHUB_ENV
+            echo "alert_count=$ALERT_COUNT" >> $GITHUB_ENV
+            
+            # 确定通知级别
+            if [ "$HEALTH_SCORE" -lt "60" ] || [ "$ALERT_COUNT" -gt "3" ]; then
+              echo "notification_level=urgent" >> $GITHUB_ENV
+            elif [ "$HEALTH_SCORE" -lt "75" ] || [ "$ALERT_COUNT" -gt "1" ]; then
+              echo "notification_level=warning" >> $GITHUB_ENV
+            else
+              echo "notification_level=info" >> $GITHUB_ENV
+            fi
+          else
+            echo "health_score=0" >> $GITHUB_ENV
+            echo "alert_count=0" >> $GITHUB_ENV
+            echo "notification_level=error" >> $GITHUB_ENV
+          fi
+      
+      - name: Create GitHub Issue for urgent problems
+        if: env.notification_level == 'urgent' || env.notification_level == 'error'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            
+            let body = `## 🚨 Urgent: Project Health Alert\n\n`;
+            body += `**Health Score:** ${process.env.health_score}/100\n`;
+            body += `**Alert Count:** ${process.env.alert_count}\n`;
+            body += `**Generated:** ${new Date().toISOString()}\n\n`;
+            
+            if (fs.existsSync('reports/dashboard-summary.md')) {
+              const summary = fs.readFileSync('reports/dashboard-summary.md', 'utf8');
+              body += `## Summary\n\n${summary}\n\n`;
+            }
+            
+            body += `## Actions Required\n\n`;
+            body += `- [ ] Review monitoring dashboard\n`;
+            body += `- [ ] Address critical alerts\n`;
+            body += `- [ ] Update project documentation if needed\n`;
+            body += `- [ ] Fix schema validation issues\n`;
+            body += `- [ ] Process urgent feedback items\n\n`;
+            
+            body += `**Dashboard:** [View Monitoring Dashboard](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})\n`;
+            
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚨 Project Health Alert - Score: ${process.env.health_score}/100`,
+              body: body,
+              labels: ['monitoring', 'urgent', 'health-check']
+            });
+      
+      - name: Send Slack notification
+        if: env.notification_level == 'urgent' && secrets.SLACK_WEBHOOK_URL
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          custom_payload: |
+            {
+              "text": "🚨 MPLP Project Health Alert",
+              "attachments": [{
+                "color": "danger",
+                "fields": [
+                  {
+                    "title": "Health Score",
+                    "value": "${{ env.health_score }}/100",
+                    "short": true
+                  },
+                  {
+                    "title": "Alerts",
+                    "value": "${{ env.alert_count }} active alerts",
+                    "short": true
+                  },
+                  {
+                    "title": "Repository",
+                    "value": "${{ github.repository }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Workflow",
+                    "value": "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>",
+                    "short": true
+                  }
+                ]
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      
+      - name: Send email notification
+        if: env.notification_level == 'urgent' && secrets.NOTIFICATION_EMAIL
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "🚨 MPLP Project Health Alert - Score: ${{ env.health_score }}/100"
+          to: ${{ secrets.NOTIFICATION_EMAIL }}
+          from: "MPLP Monitoring <${{ secrets.EMAIL_USERNAME }}>"
+          body: |
+            Project Health Alert for ${{ github.repository }}
+            
+            Health Score: ${{ env.health_score }}/100
+            Active Alerts: ${{ env.alert_count }}
+            
+            Please review the monitoring dashboard and address any critical issues.
+            
+            Dashboard: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            
+            Generated: ${{ github.event.head_commit.timestamp }}
+
+  # 清理旧的报告和工件
+  cleanup:
+    name: Cleanup Old Reports
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    
+    steps:
+      - name: Delete old workflow runs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: runs } = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'monitoring.yml',
+              per_page: 100
+            });
+            
+            // 保留最近 30 次运行，删除更早的
+            const runsToDelete = runs.workflow_runs.slice(30);
+            
+            for (const run of runsToDelete) {
+              if (run.status === 'completed') {
+                try {
+                  await github.rest.actions.deleteWorkflowRun({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    run_id: run.id
+                  });
+                  console.log(`Deleted workflow run ${run.id}`);
+                } catch (error) {
+                  console.log(`Failed to delete workflow run ${run.id}: ${error.message}`);
+                }
+              }
+            }
