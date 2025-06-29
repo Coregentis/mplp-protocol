@@ -653,41 +653,494 @@ tar -czf MPLP-v1.0.4.tar.gz v1.0.4/
 
 ---
 
-## 🔄 Stage 6: Version Management
+## 🏗️ Stage 6: Repository Architecture & Deployment Strategy
+
+### Dual Repository Architecture
+
+MPLP采用**双仓库架构**来分离开发工作和协议发布，确保用户获得纯净、专业的协议体验：
+
+#### Repository Structure
+
+```
+🔧 Internal Development Repository
+├── URL: https://github.com/Coregentis/MPLP-Protocol-Dev
+├── Purpose: 内部开发、测试、工程文件管理
+├── Visibility: Private/Internal Team Access
+├── Content: 完整开发环境
+│   ├── Core/ (协议核心内容)
+│   ├── docs/ (开发文档)
+│   ├── tests/ (测试文件)
+│   ├── scripts/ (构建脚本)
+│   ├── tools/ (开发工具)
+│   ├── config/ (配置文件)
+│   ├── .github/ (CI/CD配置)
+│   └── release/ (发布版本存档)
+└── Branch Strategy: develop, feature/*, release/*, master
+
+📦 Public Protocol Repository  
+├── URL: https://github.com/Coregentis/MPLP-Protocol
+├── Purpose: 对外发布、用户访问、协议分发
+├── Visibility: Public Access
+├── Content: 纯净协议内容
+│   ├── README.md (协议主页)
+│   ├── CHANGELOG.md (版本历史)
+│   ├── LICENSE (许可证)
+│   ├── VERSION.json (版本元数据)
+│   ├── protocols/ (协议规范)
+│   ├── schemas/ (JSON Schema)
+│   ├── examples/ (使用示例)
+│   ├── docs/ (用户文档)
+│   └── rules/ (规则框架)
+└── Branch Strategy: main (仅发布分支)
+```
+
+#### Repository Responsibilities
+
+**🔧 Development Repository (MPLP-Protocol-Dev)**
+- **Primary Function**: 协议开发、测试、版本控制
+- **Access Control**: 内部团队成员
+- **Content Management**: 
+  - 完整的开发环境和工具链
+  - 多语言文档和本地化内容
+  - 测试套件和验证脚本
+  - CI/CD配置和自动化流程
+  - 发布准备和打包脚本
+- **Branch Management**:
+  - `develop`: 主开发分支
+  - `feature/*`: 功能开发分支
+  - `release/*`: 发布准备分支
+  - `master`: 稳定版本分支
+
+**📦 Protocol Repository (MPLP-Protocol)**
+- **Primary Function**: 协议发布、用户访问、社区展示
+- **Access Control**: 公开访问
+- **Content Management**:
+  - 仅包含纯净的协议内容
+  - 英文优先的专业文档
+  - 标准化的项目结构
+  - 用户友好的导航和说明
+- **Branch Management**:
+  - `main`: 唯一发布分支
+  - 所有内容通过自动化同步更新
+
+### Deployment Workflow
+
+#### Stage 1: Development Phase
+```bash
+# 在开发仓库中进行协议开发
+cd MPLP-Protocol-Dev
+git checkout develop
+git pull origin develop
+
+# 创建功能分支
+git checkout -b feature/new-protocol-module
+# 开发工作...
+git add .
+git commit -m "feat: add new protocol module"
+git push origin feature/new-protocol-module
+
+# 合并到develop分支
+git checkout develop
+git merge feature/new-protocol-module
+```
+
+#### Stage 2: Release Preparation
+```bash
+# 创建发布分支
+git checkout -b release/v1.2.0
+
+# 执行发布准备流程（按照本指南Stage 1-5）
+./scripts/prepare-release.sh v1.2.0
+
+# 验证发布内容
+./scripts/validate-release.sh v1.2.0
+
+# 提交发布版本
+git add release/v1.2.0/
+git commit -m "🔖 Prepare release v1.2.0"
+git push origin release/v1.2.0
+```
+
+#### Stage 3: Protocol Repository Sync
+```bash
+# 自动化同步脚本（推荐）
+./scripts/sync-to-protocol-repo.sh v1.2.0
+
+# 或手动同步流程：
+# 1. 克隆协议仓库
+git clone https://github.com/Coregentis/MPLP-Protocol.git
+cd MPLP-Protocol
+
+# 2. 清理现有内容
+rm -rf * .gitignore
+
+# 3. 复制发布内容
+cp -r ../MPLP-Protocol-Dev/release/v1.2.0/* .
+
+# 4. 提交更新
+git add .
+git commit -m "🚀 Release MPLP v1.2.0"
+git tag -a v1.2.0 -m "MPLP v1.2.0 - Enhanced protocol modules"
+git push origin main
+git push origin v1.2.0
+```
+
+#### Stage 4: Release Finalization
+```bash
+# 在开发仓库中标记发布完成
+cd MPLP-Protocol-Dev
+git checkout master
+git merge release/v1.2.0
+git tag -a v1.2.0-dev -m "Development version v1.2.0"
+git push origin master
+git push origin v1.2.0-dev
+
+# 清理发布分支
+git branch -d release/v1.2.0
+git push origin --delete release/v1.2.0
+```
+
+### Automated Synchronization
+
+#### GitHub Actions Workflow
+
+创建 `.github/workflows/sync-protocol-repo.yml`：
+
+```yaml
+name: Sync to Protocol Repository
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  sync-protocol:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Development Repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          
+      - name: Extract Version
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        
+      - name: Setup Protocol Repository
+        run: |
+          git clone https://${{ secrets.PROTOCOL_REPO_TOKEN }}@github.com/Coregentis/MPLP-Protocol.git protocol-repo
+          cd protocol-repo
+          git config user.name "MPLP Release Bot"
+          git config user.email "release@coregentis.com"
+          
+      - name: Sync Release Content
+        run: |
+          # 清理协议仓库
+          cd protocol-repo
+          find . -maxdepth 1 ! -name '.git' ! -name '.' -exec rm -rf {} +
+          
+          # 复制发布内容
+          cp -r ../release/${{ steps.version.outputs.VERSION }}/* .
+          
+          # 提交更新
+          git add .
+          git commit -m "🚀 Release MPLP ${{ steps.version.outputs.VERSION }}"
+          git tag -a ${{ steps.version.outputs.VERSION }} -m "MPLP ${{ steps.version.outputs.VERSION }}"
+          git push origin main
+          git push origin ${{ steps.version.outputs.VERSION }}
+```
+
+#### Manual Sync Script
+
+创建 `scripts/sync-to-protocol-repo.sh`：
+
+```bash
+#!/bin/bash
+
+# MPLP Protocol Repository Sync Script
+# Usage: ./sync-to-protocol-repo.sh v1.2.0
+
+VERSION=$1
+DEV_REPO_PATH="$(pwd)"
+PROTOCOL_REPO_PATH="../MPLP-Protocol"
+RELEASE_PATH="release/${VERSION}"
+
+if [ -z "$VERSION" ]; then
+    echo "❌ Error: Version parameter required"
+    echo "Usage: $0 v1.2.0"
+    exit 1
+fi
+
+if [ ! -d "$RELEASE_PATH" ]; then
+    echo "❌ Error: Release directory $RELEASE_PATH not found"
+    exit 1
+fi
+
+echo "🚀 Starting sync to Protocol Repository..."
+echo "📦 Version: $VERSION"
+echo "📁 Source: $RELEASE_PATH"
+
+# Clone or update protocol repository
+if [ ! -d "$PROTOCOL_REPO_PATH" ]; then
+    echo "📥 Cloning Protocol Repository..."
+    git clone https://github.com/Coregentis/MPLP-Protocol.git "$PROTOCOL_REPO_PATH"
+else
+    echo "🔄 Updating Protocol Repository..."
+    cd "$PROTOCOL_REPO_PATH"
+    git pull origin main
+    cd "$DEV_REPO_PATH"
+fi
+
+# Sync content
+echo "📋 Syncing release content..."
+cd "$PROTOCOL_REPO_PATH"
+
+# Clear existing content (except .git)
+find . -maxdepth 1 ! -name '.git' ! -name '.' -exec rm -rf {} +
+
+# Copy release content
+cp -r "${DEV_REPO_PATH}/${RELEASE_PATH}/"* .
+
+# Commit and tag
+echo "💾 Committing changes..."
+git add .
+git commit -m "🚀 Release MPLP ${VERSION}"
+git tag -a "$VERSION" -m "MPLP ${VERSION}"
+
+# Push to remote
+echo "📤 Pushing to remote..."
+git push origin main
+git push origin "$VERSION"
+
+echo "✅ Sync completed successfully!"
+echo "🌐 Protocol Repository: https://github.com/Coregentis/MPLP-Protocol"
+echo "🏷️  Release Tag: $VERSION"
+
+cd "$DEV_REPO_PATH"
+```
+
+### Version Management Strategy
+
+#### Development Repository Versioning
+- **Development Tags**: `v1.2.0-dev`, `v1.2.0-alpha`, `v1.2.0-beta`
+- **Release Branches**: `release/v1.2.0`
+- **Feature Branches**: `feature/protocol-enhancement`
+
+#### Protocol Repository Versioning
+- **Release Tags**: `v1.2.0`, `v1.1.0`, `v1.0.0`
+- **Single Branch**: `main` (仅包含发布版本)
+- **Clean History**: 每个版本一个清晰的提交记录
+
+#### Semantic Versioning Alignment
+两个仓库遵循相同的语义化版本规范，确保版本号一致性：
+- 开发仓库：`v1.2.0-dev` (开发版本)
+- 协议仓库：`v1.2.0` (发布版本)
+
+---
+
+## 🔄 Stage 7: Version Management
+
+### Semantic Versioning (SemVer) Guidelines
+
+<mcreference link="https://semver.org/" index="1">1</mcreference> MPLP follows **Semantic Versioning 2.0.0** specification for all releases:
+
+#### Version Format: `MAJOR.MINOR.PATCH`
+
+- **MAJOR** (X.y.z): Increment when making incompatible API changes <mcreference link="https://semver.org/" index="1">1</mcreference>
+  - Breaking changes to protocol structure
+  - Removal of existing protocols or schemas
+  - Non-backward compatible modifications
+  - Examples: `1.0.0` → `2.0.0`
+
+- **MINOR** (x.Y.z): Increment when adding functionality in backward-compatible manner <mcreference link="https://semver.org/" index="1">1</mcreference>
+  - New protocol modules
+  - New schema fields (optional)
+  - Enhanced documentation
+  - Examples: `1.0.0` → `1.1.0`
+
+- **PATCH** (x.y.Z): Increment when making backward-compatible bug fixes <mcreference link="https://semver.org/" index="1">1</mcreference>
+  - Documentation corrections
+  - Schema validation fixes
+  - Example corrections
+  - Examples: `1.1.0` → `1.1.1`
+
+#### Pre-release and Build Metadata
+
+<mcreference link="https://semver.org/" index="1">1</mcreference> Additional labels for pre-release and build metadata:
+
+- **Pre-release**: `1.0.0-alpha`, `1.0.0-beta.1`, `1.0.0-rc.1`
+- **Build metadata**: `1.0.0+20240629.1`, `1.0.0-beta+exp.sha.5114f85`
+
+#### Version Precedence Rules
+
+1. `1.0.0-alpha` < `1.0.0-alpha.1` < `1.0.0-beta` < `1.0.0-rc.1` < `1.0.0`
+2. Build metadata SHOULD be ignored when determining version precedence
+3. Once released, version contents MUST NOT be modified <mcreference link="https://semver.org/" index="1">1</mcreference>
+
+### GitHub Release Management Best Practices
+
+#### Git Tagging Strategy
+
+<mcreference link="https://www.gitkraken.com/gitkon/semantic-versioning-git-tags" index="1">1</mcreference> <mcreference link="https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository" index="3">3</mcreference> Use **annotated tags** for all releases:
+
+```bash
+# Create annotated tag with message
+git tag -a v1.1.0 -m "MPLP v1.1.0 - Enhanced protocol modules with multi-language support"
+
+# Push tag to remote
+git push origin v1.1.0
+
+# Push all tags (use with caution)
+git push --tags
+```
+
+#### Tag Naming Conventions
+
+<mcreference link="https://filtpod.github.io/standards-and-practices/standards/code-versioning.html" index="2">2</mcreference> Follow consistent naming patterns:
+
+- **Release tags**: `v1.0.0`, `v1.1.0`, `v2.0.0`
+- **Pre-release tags**: `v1.0.0-alpha`, `v1.0.0-beta.1`, `v1.0.0-rc.1`
+- **Development tags**: `v0.1.0`, `v0.2.0` (for initial development)
+
+#### GitHub Release Creation
+
+<mcreference link="https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository" index="3">3</mcreference> Create releases through GitHub interface:
+
+1. **Navigate** to repository → **Releases** → **Draft a new release**
+2. **Choose tag**: Select existing tag or create new one
+3. **Target branch**: Usually `main` or `master`
+4. **Release title**: Use semantic version with descriptive title
+5. **Description**: Include comprehensive release notes
+6. **Assets**: Attach binary files if needed
+7. **Pre-release**: Mark if version is not production-ready
+8. **Latest release**: Auto-assigned based on semantic versioning
+
+#### Release Notes Best Practices
+
+<mcreference link="https://medium.com/agoda-engineering/automating-versioning-and-releases-using-semantic-release-6ed355ede742" index="5">5</mcreference> Structure release notes consistently:
+
+```markdown
+## What's Changed
+
+### 🚀 New Features
+- Added new Protocol X for enhanced functionality
+- Introduced multi-language documentation support
+
+### 🐛 Bug Fixes
+- Fixed schema validation issues in Protocol Y
+- Corrected documentation links
+
+### 📚 Documentation
+- Updated API documentation
+- Added usage examples
+
+### 🔧 Technical Changes
+- Improved build process
+- Enhanced CI/CD pipeline
+
+**Full Changelog**: https://github.com/owner/repo/compare/v1.0.0...v1.1.0
+```
 
 ### Git Operations
 
 ```bash
 # Commit release
-git add release/v1.0.4/
-git commit -m "🔖 Release MPLP v1.0.4 - Core-based clean package with English localization"
+git add release/v1.1.0/
+git commit -m "🔖 Release MPLP v1.1.0 - Enhanced protocol modules with multi-language support"
 
-# Create version tag
-git tag v1.0.4
-git push origin v1.0.4
+# Create annotated version tag
+git tag -a v1.1.0 -m "MPLP v1.1.0 - Enhanced protocol modules with multi-language support"
 
-# Push changes
+# Push changes and tags
 git push origin main
+git push origin v1.1.0
 ```
 
-### Update Version Registry
+### Version Registry Management
 
-Update root `versions.json`:
+Update root `versions.json` following semantic versioning:
 
 ```json
 [
+  {
+    "version": "v1.1.0",
+    "path": "release/v1.1.0/",
+    "status": "frozen",
+    "release_date": "2025-01-15",
+    "default": true,
+    "description": "Enhanced protocol modules with multi-language support",
+    "type": "minor_release",
+    "source": "Core directory",
+    "semver": {
+      "major": 1,
+      "minor": 1,
+      "patch": 0,
+      "prerelease": null,
+      "build": null
+    },
+    "compatibility": {
+      "backward_compatible": true,
+      "api_changes": "additive",
+      "breaking_changes": false
+    }
+  },
   {
     "version": "v1.0.4",
     "path": "release/v1.0.4/",
     "status": "frozen",
     "release_date": "2025-06-29",
-    "default": true,
+    "default": false,
     "description": "Core-based clean release with full English localization",
-    "type": "clean_release",
-    "source": "Core directory"
+    "type": "patch_release",
+    "source": "Core directory",
+    "semver": {
+      "major": 1,
+      "minor": 0,
+      "patch": 4,
+      "prerelease": null,
+      "build": null
+    }
   }
 ]
 ```
+
+### Version Planning Strategy
+
+#### Development Phase (0.x.x)
+
+<mcreference link="https://filtpod.github.io/standards-and-practices/standards/code-versioning.html" index="2">2</mcreference> Initial development should use `0.x.x` versions:
+
+- `0.1.0`: First working prototype
+- `0.2.0`: Core protocols defined
+- `0.9.0`: Release candidate preparation
+- `1.0.0`: First stable public API
+
+#### Release Planning
+
+1. **Major Releases** (X.0.0): Plan 6-12 months ahead
+   - Architectural changes
+   - Breaking API modifications
+   - Major feature overhauls
+
+2. **Minor Releases** (x.Y.0): Plan 1-3 months ahead
+   - New protocol modules
+   - Feature enhancements
+   - Backward-compatible additions
+
+3. **Patch Releases** (x.y.Z): As needed
+   - Critical bug fixes
+   - Documentation updates
+   - Security patches
+
+#### Automated Version Management
+
+<mcreference link="https://github.com/semantic-release/semantic-release" index="2">2</mcreference> Consider implementing automated semantic release:
+
+- **Conventional Commits**: Use standardized commit messages
+- **Automated Versioning**: Based on commit message analysis
+- **Release Notes Generation**: Automatic changelog creation
+- **CI/CD Integration**: Seamless release pipeline
 
 ---
 

@@ -1,0 +1,293 @@
+name: Sync to Protocol Repository
+
+# Trigger on version tags
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+      - 'v*.*.*-*'  # Include pre-release tags
+
+# Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to sync (e.g., v1.2.0)'
+        required: true
+        type: string
+      force_sync:
+        description: 'Force sync even if no changes detected'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  sync-protocol:
+    name: Sync Release to Protocol Repository
+    runs-on: ubuntu-latest
+    
+    # Only run for main repository (prevent forks from triggering)
+    if: github.repository == 'Coregentis/MPLP-Protocol-Dev'
+    
+    steps:
+      - name: 🔍 Checkout Development Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: 📋 Extract Version Information
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION=${GITHUB_REF#refs/tags/}
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "RELEASE_PATH=release/$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Processing version: $VERSION"
+          
+      - name: ✅ Validate Release Directory
+        run: |
+          RELEASE_PATH="${{ steps.version.outputs.RELEASE_PATH }}"
+          if [ ! -d "$RELEASE_PATH" ]; then
+            echo "❌ Error: Release directory $RELEASE_PATH not found"
+            echo "Available releases:"
+            ls -la release/ || echo "No release directory found"
+            exit 1
+          fi
+          
+          # Validate required files
+          if [ ! -f "$RELEASE_PATH/README.md" ]; then
+            echo "❌ Error: README.md not found in $RELEASE_PATH"
+            exit 1
+          fi
+          
+          if [ ! -f "$RELEASE_PATH/VERSION.json" ]; then
+            echo "❌ Error: VERSION.json not found in $RELEASE_PATH"
+            exit 1
+          fi
+          
+          echo "✅ Release validation passed"
+          echo "📁 Release contents:"
+          ls -la "$RELEASE_PATH"
+          
+      - name: 🔧 Setup Git Configuration
+        run: |
+          git config --global user.name "MPLP Release Bot"
+          git config --global user.email "release@coregentis.com"
+          git config --global init.defaultBranch main
+          
+      - name: 📥 Clone Protocol Repository
+        run: |
+          echo "🔄 Cloning protocol repository..."
+          git clone https://${{ secrets.PROTOCOL_REPO_TOKEN }}@github.com/Coregentis/MPLP-Protocol.git protocol-repo
+          cd protocol-repo
+          
+          # Verify repository access
+          git remote -v
+          git branch -a
+          
+      - name: 🧹 Prepare Protocol Repository
+        run: |
+          cd protocol-repo
+          
+          # Create backup branch for safety
+          BACKUP_BRANCH="backup-$(date +%Y%m%d-%H%M%S)"
+          git checkout -b "$BACKUP_BRANCH"
+          git push origin "$BACKUP_BRANCH"
+          echo "📦 Created backup branch: $BACKUP_BRANCH"
+          
+          # Switch back to main
+          git checkout main
+          
+          # Clear existing content (preserve .git and .github)
+          echo "🗑️  Clearing existing content..."
+          find . -maxdepth 1 ! -name '.git' ! -name '.github' ! -name '.' -exec rm -rf {} + 2>/dev/null || true
+          
+      - name: 📂 Sync Release Content
+        run: |
+          RELEASE_PATH="${{ steps.version.outputs.RELEASE_PATH }}"
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          
+          echo "📋 Copying release content from $RELEASE_PATH..."
+          
+          # Copy all content from release directory
+          cp -r "$RELEASE_PATH/"* protocol-repo/
+          
+          cd protocol-repo
+          
+          # Verify critical files were copied
+          if [ ! -f "README.md" ] || [ ! -f "VERSION.json" ]; then
+            echo "❌ Error: Critical files missing after copy"
+            ls -la
+            exit 1
+          fi
+          
+          echo "✅ Content copied successfully"
+          echo "📁 Protocol repository contents:"
+          ls -la
+          
+      - name: 📊 Generate Release Metadata
+        run: |
+          cd protocol-repo
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          
+          # Create release info file
+          cat > RELEASE_INFO.md << EOF
+          # MPLP Release Information
+          
+          **Version:** $VERSION  
+          **Release Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")  
+          **Source Repository:** [MPLP-Protocol-Dev](https://github.com/Coregentis/MPLP-Protocol-Dev)  
+          **Release Tag:** [$VERSION](https://github.com/Coregentis/MPLP-Protocol-Dev/releases/tag/$VERSION)  
+          
+          ## Automated Sync
+          
+          This release was automatically synchronized from the development repository using GitHub Actions.
+          
+          - **Workflow:** sync-protocol-repo.yml
+          - **Trigger:** Tag push ($VERSION)
+          - **Commit SHA:** ${{ github.sha }}
+          - **Run ID:** ${{ github.run_id }}
+          
+          ## Repository Architecture
+          
+          - **Development Repository:** Private repository for internal development and testing
+          - **Protocol Repository:** Public repository for protocol distribution and community access
+          
+          For development discussions and contributions, please refer to the development repository.
+          EOF
+          
+      - name: 💾 Commit Changes
+        run: |
+          cd protocol-repo
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          
+          # Check if there are any changes
+          if git diff --quiet && git diff --cached --quiet; then
+            if [ "${{ github.event.inputs.force_sync }}" != "true" ]; then
+              echo "⚠️  No changes detected, skipping commit"
+              echo "SKIP_PUSH=true" >> $GITHUB_ENV
+              exit 0
+            else
+              echo "🔄 Force sync enabled, proceeding with commit"
+            fi
+          fi
+          
+          # Stage all changes
+          git add .
+          
+          # Create comprehensive commit message
+          git commit -m "🚀 Release MPLP $VERSION
+          
+          ## Release Information
+          - Version: $VERSION
+          - Release Date: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          - Source: MPLP-Protocol-Dev/release/$VERSION
+          - Automated Sync: GitHub Actions
+          
+          ## Changes
+          - Synchronized protocol content from development repository
+          - Updated documentation and examples
+          - Refreshed schemas and validation rules
+          
+          ## Repository
+          - Development: https://github.com/Coregentis/MPLP-Protocol-Dev
+          - Protocol: https://github.com/Coregentis/MPLP-Protocol
+          - Workflow Run: https://github.com/Coregentis/MPLP-Protocol-Dev/actions/runs/${{ github.run_id }}"
+          
+          echo "✅ Changes committed successfully"
+          
+      - name: 🏷️ Create Release Tag
+        if: env.SKIP_PUSH != 'true'
+        run: |
+          cd protocol-repo
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          
+          # Create annotated tag with comprehensive information
+          git tag -a "$VERSION" -m "MPLP $VERSION
+          
+          Multi-Agent Project Lifecycle Protocol
+          
+          🔖 Release: $VERSION
+          📅 Date: $(date -u +"%Y-%m-%d")
+          🏠 Repository: https://github.com/Coregentis/MPLP-Protocol
+          🔧 Development: https://github.com/Coregentis/MPLP-Protocol-Dev
+          
+          ## Key Features
+          - Comprehensive protocol specifications
+          - JSON Schema validation
+          - Multi-language examples
+          - Production-ready implementation guides
+          
+          ## The TCP/IP of Multi-Agent AI Collaboration
+          
+          MPLP provides standardized protocols for multi-agent AI systems,
+          enabling seamless collaboration and interoperability across
+          different AI platforms and implementations."
+          
+          echo "🏷️  Tag $VERSION created successfully"
+          
+      - name: 📤 Push to Protocol Repository
+        if: env.SKIP_PUSH != 'true'
+        run: |
+          cd protocol-repo
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          
+          echo "📤 Pushing changes to protocol repository..."
+          
+          # Push main branch
+          git push origin main
+          if [ $? -ne 0 ]; then
+            echo "❌ Failed to push to main branch"
+            exit 1
+          fi
+          
+          # Push tag
+          git push origin "$VERSION"
+          if [ $? -ne 0 ]; then
+            echo "❌ Failed to push tag $VERSION"
+            exit 1
+          fi
+          
+          echo "✅ Successfully pushed to protocol repository"
+          
+      - name: 📋 Generate Summary
+        if: env.SKIP_PUSH != 'true'
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          
+          echo "## 🎉 MPLP $VERSION Released Successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Release Information" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version:** $VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY
+          echo "- **Protocol Repository:** [MPLP-Protocol](https://github.com/Coregentis/MPLP-Protocol)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release Page:** [View Release](https://github.com/Coregentis/MPLP-Protocol/releases/tag/$VERSION)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔗 Quick Links" >> $GITHUB_STEP_SUMMARY
+          echo "- [📖 Protocol Documentation](https://github.com/Coregentis/MPLP-Protocol)" >> $GITHUB_STEP_SUMMARY
+          echo "- [🏷️ All Releases](https://github.com/Coregentis/MPLP-Protocol/releases)" >> $GITHUB_STEP_SUMMARY
+          echo "- [🔧 Development Repository](https://github.com/Coregentis/MPLP-Protocol-Dev)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ✅ Sync Status" >> $GITHUB_STEP_SUMMARY
+          echo "- Protocol repository updated successfully" >> $GITHUB_STEP_SUMMARY
+          echo "- Release tag created and pushed" >> $GITHUB_STEP_SUMMARY
+          echo "- Public access enabled for version $VERSION" >> $GITHUB_STEP_SUMMARY
+          
+      - name: 🚨 Failure Notification
+        if: failure()
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          
+          echo "## ❌ Sync Failed for MPLP $VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔍 Troubleshooting" >> $GITHUB_STEP_SUMMARY
+          echo "1. Check if the release directory exists: \`release/$VERSION\`" >> $GITHUB_STEP_SUMMARY
+          echo "2. Verify PROTOCOL_REPO_TOKEN has write access" >> $GITHUB_STEP_SUMMARY
+          echo "3. Ensure protocol repository is accessible" >> $GITHUB_STEP_SUMMARY
+          echo "4. Review workflow logs for detailed error information" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🛠️ Manual Sync" >> $GITHUB_STEP_SUMMARY
+          echo "Run the manual sync script: \`./scripts/sync-to-protocol-repo.sh $VERSION\`" >> $GITHUB_STEP_SUMMARY
