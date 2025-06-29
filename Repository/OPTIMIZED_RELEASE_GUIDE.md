@@ -26,7 +26,7 @@
 ### Prerequisites
 - [ ] Determine semantic version number (e.g., `v1.0.4`)
 - [ ] All Core content development completed
-- [ ] Core content fully English-localized
+- [ ] Core content fully English-localized，保留多语言版本
 - [ ] Backup current workspace
 - [ ] Clean working directory
 

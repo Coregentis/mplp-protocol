@@ -1,0 +1,28 @@
+{
+  "version": "1.0.0",
+  "release_date": "2024-12-29",
+  "release_type": "stable",
+  "protocol_version": "1.0",
+  "schema_version": "Draft 2020-12",
+  "supported_languages": ["en", "zh", "tw"],
+  "protocol_modules": 10,
+  "governance_rules": 75,
+  "license": {
+    "protocols": "Apache-2.0",
+    "implementations": "MIT"
+  },
+  "repository": {
+    "url": "https://github.com/Coregentis/MPLP-Protocol",
+    "type": "public"
+  },
+  "namespace": "https://coregentis.org/schemas/v1.0/",
+  "compatibility": {
+    "minimum_version": "1.0.0",
+    "breaking_changes": false
+  },
+  "release_notes": {
+    "en": "Initial stable release of MPLP Protocol v1.0.0 with complete protocol suite, governance rules, and multi-language support.",
+    "zh": "MPLP协议v1.0.0初始稳定版本发布，包含完整协议套件、治理规则和多语言支持。",
+    "tw": "MPLP協議v1.0.0初始穩定版本發布，包含完整協議套件、治理規則和多語言支持。"
+  }
+}
