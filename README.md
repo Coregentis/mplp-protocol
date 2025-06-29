@@ -1,7 +1,12 @@
 <div align="center">
-# 🤖 Multi-Agent Project Lifecycle Protocol (MPLP)
+  
+# 🤖 **Multi-Agent Project Lifecycle Protocol (MPLP)**
 
-**A standardized protocol for multi-agent collaborative project management**
+## **The TCP/IP of Multi-Agent AI Collaboration**
+
+MPLP is an open protocol suite that standardizes the lifecycle of multi-agent project development.  
+It defines 10 modular, language-independent protocols for AI-native planning, execution, confirmation, and feedback.
+
 
 [![Version](https://img.shields.io/badge/version-v1.0.2-blue.svg)](https://github.com/Coregentis/mplp-protocol/releases/tag/v1.0.2)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
