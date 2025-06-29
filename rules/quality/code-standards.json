@@ -1,0 +1,465 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MPLP Code Quality Standards Rules",
+  "description": "Quality rules defining code standards, best practices, and quality metrics for MPLP implementations",
+  "version": "1.0.0",
+  "codeQualityRules": [
+    {
+      "ruleId": "CODE-001",
+      "name": "Code Style and Formatting Standards",
+      "category": "code_style",
+      "scope": "global",
+      "priority": "medium",
+      "description": "Standardized code formatting, naming conventions, and style guidelines for MPLP implementations",
+      "styleStandards": {
+        "formatting": {
+          "indentation": {
+            "type": "spaces",
+            "size": 2,
+            "consistency": "mandatory",
+            "languages": {
+              "javascript": "2_spaces",
+              "typescript": "2_spaces",
+              "python": "4_spaces",
+              "java": "4_spaces",
+              "csharp": "4_spaces",
+              "go": "tabs",
+              "rust": "4_spaces"
+            }
+          },
+          "lineLength": {
+            "maximum": 120,
+            "recommended": 80,
+            "enforcement": "warning_at_100_error_at_120",
+            "exceptions": [
+              "long_urls",
+              "import_statements",
+              "string_literals"
+            ]
+          },
+          "lineBreaks": {
+            "style": "lf",
+            "trailingNewline": "required",
+            "multipleBlankLines": "maximum_2",
+            "endOfFile": "single_newline"
+          },
+          "whitespace": {
+            "trailingSpaces": "not_allowed",
+            "aroundOperators": "required",
+            "afterCommas": "required",
+            "beforeBraces": "required"
+          }
+        },
+        "namingConventions": {
+          "variables": {
+            "style": "camelCase",
+            "constants": "UPPER_SNAKE_CASE",
+            "private": "_prefixed_camelCase",
+            "descriptive": "mandatory",
+            "abbreviations": "avoid_unless_widely_known"
+          },
+          "functions": {
+            "style": "camelCase",
+            "verbs": "start_with_action_verb",
+            "descriptive": "mandatory",
+            "parameters": "camelCase",
+            "returnType": "clearly_indicated"
+          },
+          "classes": {
+            "style": "PascalCase",
+            "descriptive": "mandatory",
+            "interfaces": "I_prefixed_PascalCase",
+            "abstract": "Abstract_prefixed_PascalCase",
+            "enums": "PascalCase"
+          },
+          "files": {
+            "style": "kebab-case",
+            "extensions": "lowercase",
+            "descriptive": "mandatory",
+            "modules": "match_primary_export"
+          },
+          "protocols": {
+            "style": "PascalCase",
+            "prefix": "MPLP",
+            "descriptive": "mandatory",
+            "versioning": "semantic_versioning"
+          }
+        },
+        "codeOrganization": {
+          "imports": {
+            "order": [
+              "standard_library",
+              "third_party",
+              "local_modules",
+              "relative_imports"
+            ],
+            "grouping": "separate_with_blank_lines",
+            "sorting": "alphabetical_within_groups",
+            "unused": "not_allowed"
+          },
+          "exports": {
+            "style": "explicit_exports",
+            "default": "single_default_per_file",
+            "named": "descriptive_names",
+            "order": "constants_types_functions_classes"
+          },
+          "structure": {
+            "constants": "top_of_file_after_imports",
+            "types": "before_implementation",
+            "helpers": "before_main_logic",
+            "main": "primary_logic_in_middle",
+            "exports": "bottom_of_file"
+          }
+        }
+      },
+      "enforcement": {
+        "linting": {
+          "tools": [
+            "eslint_for_javascript_typescript",
+            "pylint_for_python",
+            "checkstyle_for_java",
+            "stylecop_for_csharp",
+            "gofmt_for_go",
+            "rustfmt_for_rust"
+          ],
+          "configuration": "standardized_config_files",
+          "automation": "pre_commit_hooks",
+          "cicd": "automated_checks_in_pipeline"
+        },
+        "formatting": {
+          "tools": [
+            "prettier_for_javascript_typescript",
+            "black_for_python",
+            "google_java_format_for_java",
+            "dotnet_format_for_csharp",
+            "gofmt_for_go",
+            "rustfmt_for_rust"
+          ],
+          "automation": "auto_format_on_save",
+          "verification": "format_check_in_cicd"
+        }
+      },
+      "conditions": {
+        "when": "code_development_and_maintenance",
+        "context": "all_source_code_files"
+      },
+      "actions": {
+        "then": "enforce_code_style_and_formatting_standards",
+        "onSuccess": "maintain_consistent_code_style",
+        "onFailure": "reject_code_that_violates_standards"
+      },
+      "enforcement": "mandatory",
+      "metadata": {
+        "version": "1.0.0",
+        "author": "MPLP Core Team",
+        "createdAt": "2025-06-28T11:34:54Z",
+        "updatedAt": "2025-06-28T11:34:54Z"
+      }
+    },
+    {
+      "ruleId": "CODE-002",
+      "name": "Code Complexity and Maintainability Standards",
+      "category": "code_complexity",
+      "scope": "global",
+      "priority": "high",
+      "description": "Standards for code complexity, maintainability metrics, and technical debt management",
+      "complexityMetrics": {
+        "cyclomaticComplexity": {
+          "functions": {
+            "target": "less_than_5",
+            "acceptable": "less_than_10",
+            "unacceptable": "greater_than_15",
+            "measurement": "number_of_linearly_independent_paths"
+          },
+          "classes": {
+            "target": "less_than_20",
+            "acceptable": "less_than_50",
+            "unacceptable": "greater_than_100",
+            "measurement": "sum_of_method_complexities"
+          },
+          "modules": {
+            "target": "less_than_100",
+            "acceptable": "less_than_200",
+            "unacceptable": "greater_than_500",
+            "measurement": "total_module_complexity"
+          }
+        },
+        "cognitiveComplexity": {
+          "functions": {
+            "target": "less_than_10",
+            "acceptable": "less_than_15",
+            "unacceptable": "greater_than_25",
+            "measurement": "mental_effort_required_to_understand"
+          },
+          "nesting": {
+            "target": "maximum_3_levels",
+            "acceptable": "maximum_4_levels",
+            "unacceptable": "more_than_5_levels",
+            "measurement": "maximum_nesting_depth"
+          }
+        },
+        "codeSize": {
+          "functions": {
+            "target": "less_than_20_lines",
+            "acceptable": "less_than_50_lines",
+            "unacceptable": "greater_than_100_lines",
+            "measurement": "lines_of_code_excluding_comments_and_whitespace"
+          },
+          "classes": {
+            "target": "less_than_200_lines",
+            "acceptable": "less_than_500_lines",
+            "unacceptable": "greater_than_1000_lines",
+            "measurement": "total_class_lines_of_code"
+          },
+          "files": {
+            "target": "less_than_300_lines",
+            "acceptable": "less_than_500_lines",
+            "unacceptable": "greater_than_1000_lines",
+            "measurement": "total_file_lines_of_code"
+          }
+        },
+        "coupling": {
+          "afferentCoupling": {
+            "target": "less_than_10_dependencies",
+            "acceptable": "less_than_20_dependencies",
+            "unacceptable": "greater_than_30_dependencies",
+            "measurement": "number_of_classes_depending_on_this_class"
+          },
+          "efferentCoupling": {
+            "target": "less_than_5_dependencies",
+            "acceptable": "less_than_10_dependencies",
+            "unacceptable": "greater_than_15_dependencies",
+            "measurement": "number_of_classes_this_class_depends_on"
+          }
+        },
+        "cohesion": {
+          "lackOfCohesion": {
+            "target": "less_than_0_2",
+            "acceptable": "less_than_0_5",
+            "unacceptable": "greater_than_0_8",
+            "measurement": "lack_of_cohesion_of_methods_metric"
+          }
+        }
+      },
+      "maintainabilityStandards": {
+        "documentation": {
+          "codeComments": {
+            "target": "10_to_20_percent_comment_ratio",
+            "acceptable": "5_to_30_percent_comment_ratio",
+            "unacceptable": "less_than_5_or_greater_than_50_percent",
+            "quality": "meaningful_and_up_to_date_comments"
+          },
+          "apiDocumentation": {
+            "coverage": "100_percent_public_api_documented",
+            "quality": "comprehensive_examples_and_usage",
+            "format": "standardized_documentation_format",
+            "maintenance": "documentation_updated_with_code_changes"
+          }
+        },
+        "testability": {
+          "unitTestCoverage": {
+            "target": "greater_than_90_percent",
+            "acceptable": "greater_than_80_percent",
+            "unacceptable": "less_than_70_percent",
+            "measurement": "line_coverage_and_branch_coverage"
+          },
+          "testQuality": {
+            "independence": "tests_are_independent_and_isolated",
+            "repeatability": "tests_produce_consistent_results",
+            "clarity": "tests_are_clear_and_well_documented",
+            "coverage": "tests_cover_edge_cases_and_error_conditions"
+          }
+        },
+        "codeReuse": {
+          "duplication": {
+            "target": "less_than_3_percent_code_duplication",
+            "acceptable": "less_than_5_percent_code_duplication",
+            "unacceptable": "greater_than_10_percent_code_duplication",
+            "measurement": "percentage_of_duplicated_code_blocks"
+          },
+          "abstraction": {
+            "commonFunctionality": "extract_common_functionality_into_reusable_components",
+            "libraries": "use_established_libraries_and_frameworks",
+            "patterns": "implement_consistent_design_patterns"
+          }
+        }
+      },
+      "technicalDebtManagement": {
+        "identification": {
+          "codeSmells": "automated_detection_of_code_smells",
+          "technicalDebtRatio": "measure_and_track_technical_debt_ratio",
+          "codeAge": "identify_and_prioritize_legacy_code",
+          "performanceIssues": "identify_performance_bottlenecks"
+        },
+        "prioritization": {
+          "impact": "assess_business_impact_of_technical_debt",
+          "effort": "estimate_effort_required_for_remediation",
+          "risk": "evaluate_risk_of_not_addressing_debt",
+          "dependencies": "consider_dependencies_and_coupling"
+        },
+        "remediation": {
+          "planning": "include_technical_debt_remediation_in_sprint_planning",
+          "allocation": "allocate_20_percent_of_development_time_to_debt_reduction",
+          "tracking": "track_progress_on_technical_debt_reduction",
+          "prevention": "implement_practices_to_prevent_new_technical_debt"
+        }
+      },
+      "conditions": {
+        "when": "code_development_review_and_maintenance",
+        "context": "all_source_code_and_development_activities"
+      },
+      "actions": {
+        "then": "enforce_complexity_and_maintainability_standards",
+        "onSuccess": "maintain_high_code_quality_and_low_technical_debt",
+        "onFailure": "require_refactoring_and_improvement"
+      },
+      "enforcement": "mandatory",
+      "metadata": {
+        "version": "1.0.0",
+        "author": "MPLP Core Team",
+        "createdAt": "2025-06-28T11:34:54Z",
+        "updatedAt": "2025-06-28T11:34:54Z"
+      }
+    },
+    {
+      "ruleId": "CODE-003",
+      "name": "Security and Reliability Standards",
+      "category": "security_reliability",
+      "scope": "global",
+      "priority": "critical",
+      "description": "Security best practices and reliability standards for MPLP implementations",
+      "securityStandards": {
+        "inputValidation": {
+          "sanitization": {
+            "userInput": "sanitize_all_user_input",
+            "sqlInjection": "use_parameterized_queries",
+            "xssProtection": "escape_output_and_validate_input",
+            "pathTraversal": "validate_file_paths_and_restrict_access"
+          },
+          "validation": {
+            "dataTypes": "validate_data_types_and_formats",
+            "ranges": "validate_numeric_ranges_and_string_lengths",
+            "businessRules": "validate_against_business_rules",
+            "whitelisting": "use_whitelisting_over_blacklisting"
+          }
+        },
+        "authentication": {
+          "passwordSecurity": {
+            "hashing": "use_strong_password_hashing_algorithms",
+            "saltRounds": "minimum_12_salt_rounds_for_bcrypt",
+            "complexity": "enforce_password_complexity_requirements",
+            "storage": "never_store_passwords_in_plain_text"
+          },
+          "sessionManagement": {
+            "tokenSecurity": "use_cryptographically_secure_tokens",
+            "expiration": "implement_appropriate_session_timeouts",
+            "regeneration": "regenerate_session_ids_after_authentication",
+            "storage": "secure_session_storage_and_transmission"
+          }
+        },
+        "authorization": {
+          "accessControl": {
+            "principleOfLeastPrivilege": "grant_minimum_necessary_permissions",
+            "roleBasedAccess": "implement_role_based_access_control",
+            "resourceProtection": "protect_all_sensitive_resources",
+            "defaultDeny": "default_to_deny_access"
+          },
+          "apiSecurity": {
+            "authentication": "require_authentication_for_all_apis",
+            "rateLimiting": "implement_rate_limiting_and_throttling",
+            "cors": "configure_cors_policies_appropriately",
+            "versioning": "secure_api_versioning_and_deprecation"
+          }
+        },
+        "dataProtection": {
+          "encryption": {
+            "atRest": "encrypt_sensitive_data_at_rest",
+            "inTransit": "use_tls_1_3_for_data_in_transit",
+            "keyManagement": "implement_secure_key_management",
+            "algorithms": "use_approved_cryptographic_algorithms"
+          },
+          "privacy": {
+            "dataMinimization": "collect_only_necessary_data",
+            "retention": "implement_data_retention_policies",
+            "anonymization": "anonymize_or_pseudonymize_personal_data",
+            "consent": "obtain_explicit_consent_for_data_processing"
+          }
+        },
+        "secureCodePractices": {
+          "errorHandling": {
+            "informationLeakage": "avoid_exposing_sensitive_information_in_errors",
+            "logging": "log_security_events_appropriately",
+            "gracefulDegradation": "implement_graceful_error_handling",
+            "monitoring": "monitor_and_alert_on_security_events"
+          },
+          "dependencies": {
+            "vulnerabilityScanning": "regularly_scan_dependencies_for_vulnerabilities",
+            "updates": "keep_dependencies_up_to_date",
+            "verification": "verify_integrity_of_downloaded_packages",
+            "minimization": "minimize_number_of_dependencies"
+          }
+        }
+      },
+      "reliabilityStandards": {
+        "errorHandling": {
+          "exceptions": {
+            "catching": "catch_specific_exceptions_not_generic",
+            "handling": "handle_exceptions_appropriately",
+            "logging": "log_exceptions_with_sufficient_detail",
+            "recovery": "implement_recovery_mechanisms_where_possible"
+          },
+          "resilience": {
+            "retryLogic": "implement_exponential_backoff_retry_logic",
+            "circuitBreaker": "implement_circuit_breaker_pattern",
+            "timeout": "implement_appropriate_timeouts",
+            "fallback": "provide_fallback_mechanisms"
+          }
+        },
+        "resourceManagement": {
+          "memoryManagement": {
+            "leaks": "prevent_memory_leaks",
+            "allocation": "efficient_memory_allocation_and_deallocation",
+            "monitoring": "monitor_memory_usage",
+            "limits": "implement_memory_usage_limits"
+          },
+          "connectionManagement": {
+            "pooling": "use_connection_pooling",
+            "cleanup": "properly_close_connections_and_resources",
+            "limits": "implement_connection_limits",
+            "monitoring": "monitor_connection_usage"
+          }
+        },
+        "concurrency": {
+          "threadSafety": {
+            "synchronization": "proper_synchronization_of_shared_resources",
+            "deadlocks": "prevent_deadlocks_and_race_conditions",
+            "atomicity": "ensure_atomic_operations_where_necessary",
+            "immutability": "prefer_immutable_data_structures"
+          },
+          "asynchronous": {
+            "nonBlocking": "use_non_blocking_operations_where_appropriate",
+            "backpressure": "implement_backpressure_handling",
+            "cancellation": "support_operation_cancellation",
+            "monitoring": "monitor_asynchronous_operation_performance"
+          }
+        }
+      },
+      "conditions": {
+        "when": "security_and_reliability_critical_code_development",
+        "context": "all_production_code_and_security_sensitive_operations"
+      },
+      "actions": {
+        "then": "enforce_security_and_reliability_standards",
+        "onSuccess": "maintain_secure_and_reliable_system",
+        "onFailure": "require_security_and_reliability_improvements"
+      },
+      "enforcement": "mandatory",
+      "metadata": {
+        "version": "1.0.0",
+        "author": "MPLP Core Team",
+        "createdAt": "2025-06-28T11:34:54Z",
+        "updatedAt": "2025-06-28T11:34:54Z"
+      }
+    }
+  ]
+}

@@ -1,0 +1,285 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coregentis.org/schemas/v1.0/Workflow.schema.json",
+  "version": "1.0.0",
+  "title": "MPLP.Workflow Schema",
+  "description": "Schema for defining workflow orchestration, process management, and execution flow in multi-agent systems.",
+  "type": "object",
+  "properties": {
+    "workflowId": {
+      "type": "string",
+      "description": "Unique identifier for the workflow instance."
+    },
+    "workflowName": {
+      "type": "string",
+      "description": "Human-readable name of the workflow."
+    },
+    "workflowType": {
+      "type": "string",
+      "enum": ["sequential", "parallel", "conditional", "recursive", "hybrid"],
+      "description": "Type of workflow execution pattern."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "active", "suspended", "completed", "failed", "cancelled"],
+      "description": "Current status of the workflow."
+    },
+    "stages": {
+      "type": "array",
+      "description": "Ordered list of workflow stages.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "stageId": {
+            "type": "string",
+            "description": "Unique identifier for the stage."
+          },
+          "stageName": {
+            "type": "string",
+            "description": "Name of the stage."
+          },
+          "stageType": {
+            "type": "string",
+            "enum": ["planning", "execution", "validation", "learning", "coordination"],
+            "description": "Type of stage in the workflow."
+          },
+          "assignedRoles": {
+            "type": "array",
+            "description": "Roles responsible for this stage.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "dependencies": {
+            "type": "array",
+            "description": "Stage IDs that must complete before this stage.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "conditions": {
+            "type": "object",
+            "description": "Conditions for stage execution.",
+            "properties": {
+              "preconditions": {
+                "type": "array",
+                "description": "Conditions that must be met before stage execution.",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "condition": {
+                      "type": "string",
+                      "description": "Condition expression or description."
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": ["data_available", "role_ready", "resource_available", "custom"],
+                      "description": "Type of precondition."
+                    }
+                  },
+                  "required": ["condition", "type"]
+                }
+              },
+              "postconditions": {
+                "type": "array",
+                "description": "Conditions that must be met after stage completion.",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "condition": {
+                      "type": "string",
+                      "description": "Condition expression or description."
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": ["output_generated", "quality_check", "approval_received", "custom"],
+                      "description": "Type of postcondition."
+                    }
+                  },
+                  "required": ["condition", "type"]
+                }
+              }
+            }
+          },
+          "timeouts": {
+            "type": "object",
+            "description": "Timeout configurations for the stage.",
+            "properties": {
+              "executionTimeout": {
+                "type": "integer",
+                "description": "Maximum execution time in seconds."
+              },
+              "idleTimeout": {
+                "type": "integer",
+                "description": "Maximum idle time before escalation in seconds."
+              }
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "running", "completed", "failed", "skipped"],
+            "description": "Current status of the stage."
+          }
+        },
+        "required": ["stageId", "stageName", "stageType", "assignedRoles"]
+      }
+    },
+    "recursiveConfig": {
+      "type": "object",
+      "description": "Configuration for recursive problem-solving workflows.",
+      "properties": {
+        "maxDepth": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum recursion depth allowed."
+        },
+        "decompositionStrategy": {
+          "type": "string",
+          "enum": ["divide_and_conquer", "iterative_refinement", "hierarchical_breakdown"],
+          "description": "Strategy for problem decomposition."
+        },
+        "convergenceCriteria": {
+          "type": "array",
+          "description": "Criteria for determining when recursion should stop.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "criterion": {
+                "type": "string",
+                "description": "Convergence criterion description."
+              },
+              "threshold": {
+                "type": "number",
+                "description": "Threshold value for the criterion."
+              }
+            },
+            "required": ["criterion"]
+          }
+        }
+      }
+    },
+    "suspensionConfig": {
+      "type": "object",
+      "description": "Configuration for workflow suspension and resumption.",
+      "properties": {
+        "suspensionPoints": {
+          "type": "array",
+          "description": "Defined points where workflow can be suspended.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "pointId": {
+                "type": "string",
+                "description": "Identifier for the suspension point."
+              },
+              "stageId": {
+                "type": "string",
+                "description": "Stage where suspension can occur."
+              },
+              "condition": {
+                "type": "string",
+                "description": "Condition that triggers suspension."
+              },
+              "resumptionRequirements": {
+                "type": "array",
+                "description": "Requirements for resuming from this point.",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": ["pointId", "stageId", "condition"]
+          }
+        },
+        "statePreservation": {
+          "type": "object",
+          "description": "Configuration for preserving workflow state during suspension.",
+          "properties": {
+            "preserveContext": {
+              "type": "boolean",
+              "description": "Whether to preserve execution context."
+            },
+            "preserveIntermediateResults": {
+              "type": "boolean",
+              "description": "Whether to preserve intermediate results."
+            },
+            "preserveAgentStates": {
+              "type": "boolean",
+              "description": "Whether to preserve agent states."
+            }
+          }
+        }
+      }
+    },
+    "changeManagement": {
+      "type": "object",
+      "description": "Configuration for handling demand changes during workflow execution.",
+      "properties": {
+        "changePoints": {
+          "type": "array",
+          "description": "Points where changes can be incorporated.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "pointId": {
+                "type": "string",
+                "description": "Identifier for the change point."
+              },
+              "stageId": {
+                "type": "string",
+                "description": "Stage where changes can be incorporated."
+              },
+              "changeTypes": {
+                "type": "array",
+                "description": "Types of changes allowed at this point.",
+                "items": {
+                  "type": "string",
+                  "enum": ["requirement_change", "scope_change", "priority_change", "resource_change"]
+                }
+              },
+              "approvalRequired": {
+                "type": "boolean",
+                "description": "Whether approval is required for changes at this point."
+              }
+            },
+            "required": ["pointId", "stageId", "changeTypes"]
+          }
+        },
+        "impactAssessment": {
+          "type": "object",
+          "description": "Configuration for assessing change impact.",
+          "properties": {
+            "assessmentCriteria": {
+              "type": "array",
+              "description": "Criteria for assessing change impact.",
+              "items": {
+                "type": "string"
+              }
+            },
+            "rollbackStrategy": {
+              "type": "string",
+              "enum": ["checkpoint_rollback", "stage_rollback", "full_rollback"],
+              "description": "Strategy for rolling back changes if needed."
+            }
+          }
+        }
+      }
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the workflow was created."
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the workflow was last updated."
+    },
+    "version": {
+      "type": "string",
+      "description": "Version of the workflow definition."
+    }
+  },
+  "required": ["workflowId", "workflowName", "workflowType", "status", "stages", "createdAt"],
+  "additionalProperties": true
+}

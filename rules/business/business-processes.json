@@ -1,0 +1,453 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MPLP Business Process Rules",
+  "description": "Business rules defining organizational processes, workflows, and operational procedures within MPLP",
+  "version": "1.0.0",
+  "businessProcessRules": [
+    {
+      "ruleId": "BPR-001",
+      "name": "Project Lifecycle Management",
+      "category": "lifecycle_management",
+      "scope": "global",
+      "priority": "high",
+      "description": "Rules governing the complete project lifecycle from initiation to closure",
+      "lifecyclePhases": {
+        "initiation": {
+          "requiredProtocols": ["Context"],
+          "entryGates": {
+            "businessCase": "approved_business_case_required",
+            "stakeholderIdentification": "key_stakeholders_identified",
+            "initialRiskAssessment": "high_level_risk_assessment_completed"
+          },
+          "exitGates": {
+            "projectCharter": "signed_project_charter",
+            "stakeholderRegister": "complete_stakeholder_register",
+            "initialScope": "high_level_scope_definition"
+          },
+          "duration": "2_to_4_weeks",
+          "keyActivities": [
+            "develop_project_charter",
+            "identify_stakeholders",
+            "conduct_feasibility_study",
+            "establish_project_governance"
+          ]
+        },
+        "planning": {
+          "requiredProtocols": ["Context", "Plan", "Role", "Workflow"],
+          "entryGates": {
+            "approvedCharter": "project_charter_approved",
+            "teamAssignment": "core_team_members_assigned",
+            "planningKickoff": "planning_kickoff_meeting_completed"
+          },
+          "exitGates": {
+            "detailedPlan": "comprehensive_project_plan",
+            "approvedBudget": "detailed_budget_approved",
+            "riskRegister": "complete_risk_register",
+            "qualityPlan": "quality_management_plan"
+          },
+          "duration": "4_to_8_weeks",
+          "keyActivities": [
+            "develop_detailed_project_plan",
+            "create_work_breakdown_structure",
+            "estimate_resources_and_costs",
+            "develop_risk_management_plan",
+            "establish_communication_plan"
+          ]
+        },
+        "execution": {
+          "requiredProtocols": ["Execute", "Test", "Trace", "Workflow"],
+          "entryGates": {
+            "approvedPlan": "project_plan_approved",
+            "resourcesAllocated": "resources_allocated_and_available",
+            "executionKickoff": "execution_kickoff_meeting_completed"
+          },
+          "exitGates": {
+            "deliverables": "all_deliverables_completed",
+            "qualityAssurance": "quality_criteria_met",
+            "stakeholderAcceptance": "stakeholder_acceptance_obtained"
+          },
+          "duration": "variable_based_on_project_scope",
+          "keyActivities": [
+            "execute_project_work",
+            "manage_project_team",
+            "implement_quality_assurance",
+            "manage_stakeholder_engagement",
+            "monitor_and_control_project_work"
+          ]
+        },
+        "monitoring": {
+          "requiredProtocols": ["Trace", "Learn"],
+          "entryGates": {
+            "executionInProgress": "project_execution_started",
+            "monitoringPlan": "monitoring_plan_established"
+          },
+          "exitGates": {
+            "performanceReports": "regular_performance_reports",
+            "issueResolution": "issues_identified_and_resolved",
+            "changeControl": "changes_managed_through_formal_process"
+          },
+          "duration": "continuous_during_execution",
+          "keyActivities": [
+            "track_project_performance",
+            "manage_project_changes",
+            "resolve_issues_and_conflicts",
+            "update_project_documentation",
+            "communicate_project_status"
+          ]
+        },
+        "closure": {
+          "requiredProtocols": ["Confirm", "Delivery", "Learn"],
+          "entryGates": {
+            "deliverableCompletion": "all_deliverables_completed",
+            "stakeholderAcceptance": "formal_acceptance_received",
+            "contractualObligations": "all_contractual_obligations_met"
+          },
+          "exitGates": {
+            "projectClosure": "formal_project_closure",
+            "lessonsLearned": "lessons_learned_documented",
+            "resourceRelease": "resources_released_to_organization"
+          },
+          "duration": "2_to_4_weeks",
+          "keyActivities": [
+            "conduct_final_deliverable_review",
+            "obtain_formal_acceptance",
+            "conduct_lessons_learned_session",
+            "release_project_resources",
+            "archive_project_documentation"
+          ]
+        }
+      },
+      "phaseTransitionRules": {
+        "gateReviews": {
+          "reviewBoard": "project_steering_committee",
+          "reviewCriteria": "predefined_exit_criteria_met",
+          "decisionOptions": ["proceed", "proceed_with_conditions", "repeat_phase", "terminate_project"],
+          "documentationRequirements": "phase_completion_report_required"
+        },
+        "exceptionHandling": {
+          "emergencyProcedures": "fast_track_approval_for_critical_issues",
+          "escalationPath": "project_sponsor_and_executive_committee",
+          "riskMitigation": "additional_risk_assessment_for_exceptions"
+        }
+      },
+      "conditions": {
+        "when": "project_lifecycle_management_required",
+        "context": "formal_project_environment"
+      },
+      "actions": {
+        "then": "enforce_lifecycle_phase_gates",
+        "onSuccess": "proceed_to_next_phase",
+        "onFailure": "remediate_phase_deficiencies"
+      },
+      "enforcement": "mandatory",
+      "metadata": {
+        "version": "1.0.0",
+        "author": "MPLP Core Team",
+        "createdAt": "2025-06-28T11:34:54Z",
+        "updatedAt": "2025-06-28T11:34:54Z"
+      }
+    },
+    {
+      "ruleId": "BPR-002",
+      "name": "Change Management Process",
+      "category": "change_management",
+      "scope": "global",
+      "priority": "high",
+      "description": "Rules governing the change management process for scope, schedule, and resource modifications",
+      "changeTypes": {
+        "scope": {
+          "definition": "changes_to_project_deliverables_or_requirements",
+          "approvalAuthority": "project_sponsor_and_steering_committee",
+          "impactAssessment": {
+            "schedule": "assess_impact_on_project_timeline",
+            "budget": "assess_impact_on_project_budget",
+            "resources": "assess_impact_on_resource_allocation",
+            "quality": "assess_impact_on_quality_standards",
+            "risk": "assess_new_risks_introduced"
+          }
+        },
+        "schedule": {
+          "definition": "changes_to_project_timeline_or_milestones",
+          "approvalAuthority": "project_manager_with_sponsor_notification",
+          "impactAssessment": {
+            "dependencies": "assess_impact_on_dependent_activities",
+            "resources": "assess_resource_availability_changes",
+            "stakeholders": "assess_impact_on_stakeholder_expectations",
+            "contracts": "assess_contractual_implications"
+          }
+        },
+        "budget": {
+          "definition": "changes_to_project_budget_or_cost_baseline",
+          "approvalAuthority": "finance_manager_and_project_sponsor",
+          "impactAssessment": {
+            "funding": "assess_funding_source_and_availability",
+            "roi": "reassess_return_on_investment",
+            "approval": "obtain_additional_budget_approvals",
+            "reporting": "update_financial_reporting_requirements"
+          }
+        },
+        "resources": {
+          "definition": "changes_to_project_team_or_resource_allocation",
+          "approvalAuthority": "resource_manager_and_project_manager",
+          "impactAssessment": {
+            "skills": "assess_skill_gap_and_training_needs",
+            "availability": "assess_resource_availability_and_conflicts",
+            "productivity": "assess_impact_on_team_productivity",
+            "morale": "assess_impact_on_team_morale"
+          }
+        }
+      },
+      "changeProcess": {
+        "initiation": {
+          "changeRequest": {
+            "requiredFields": [
+              "change_description",
+              "business_justification",
+              "impact_assessment",
+              "proposed_solution",
+              "urgency_level"
+            ],
+            "submissionMethod": "formal_change_request_form",
+            "initialReview": "project_manager_initial_assessment"
+          }
+        },
+        "evaluation": {
+          "impactAnalysis": {
+            "technicalImpact": "assess_technical_feasibility_and_complexity",
+            "businessImpact": "assess_business_value_and_alignment",
+            "riskImpact": "assess_risk_implications",
+            "resourceImpact": "assess_resource_requirements"
+          },
+          "costBenefitAnalysis": {
+            "implementationCost": "estimate_cost_of_implementing_change",
+            "opportunityCost": "estimate_cost_of_not_implementing_change",
+            "benefitRealization": "estimate_benefits_and_timeline",
+            "netValue": "calculate_net_present_value_of_change"
+          }
+        },
+        "approval": {
+          "approvalWorkflow": {
+            "low_impact": {
+              "threshold": "less_than_5_percent_budget_or_schedule_impact",
+              "approver": "project_manager",
+              "timeframe": "2_business_days"
+            },
+            "medium_impact": {
+              "threshold": "5_to_15_percent_budget_or_schedule_impact",
+              "approver": "project_sponsor",
+              "timeframe": "5_business_days"
+            },
+            "high_impact": {
+              "threshold": "greater_than_15_percent_budget_or_schedule_impact",
+              "approver": "steering_committee",
+              "timeframe": "10_business_days"
+            }
+          },
+          "decisionCriteria": {
+            "alignment": "alignment_with_business_objectives",
+            "feasibility": "technical_and_resource_feasibility",
+            "value": "positive_cost_benefit_ratio",
+            "risk": "acceptable_risk_level"
+          }
+        },
+        "implementation": {
+          "planningUpdate": {
+            "projectPlan": "update_project_plan_and_schedule",
+            "budgetBaseline": "update_budget_baseline",
+            "riskRegister": "update_risk_register",
+            "stakeholderCommunication": "communicate_changes_to_stakeholders"
+          },
+          "executionControl": {
+            "changeImplementation": "implement_approved_changes",
+            "progressMonitoring": "monitor_change_implementation_progress",
+            "qualityControl": "ensure_change_meets_quality_standards",
+            "issueResolution": "resolve_implementation_issues"
+          }
+        },
+        "closure": {
+          "verification": {
+            "completionVerification": "verify_change_implementation_completion",
+            "benefitRealization": "verify_expected_benefits_achieved",
+            "stakeholderAcceptance": "obtain_stakeholder_acceptance",
+            "documentationUpdate": "update_project_documentation"
+          },
+          "lessonsLearned": {
+            "processImprovement": "identify_change_process_improvements",
+            "knowledgeCapture": "capture_lessons_learned",
+            "bestPractices": "document_best_practices",
+            "organizationalLearning": "share_learnings_across_organization"
+          }
+        }
+      },
+      "conditions": {
+        "when": "project_change_requested",
+        "context": "formal_change_control_required"
+      },
+      "actions": {
+        "then": "execute_change_management_process",
+        "onSuccess": "implement_approved_changes",
+        "onFailure": "reject_change_or_request_modifications"
+      },
+      "enforcement": "mandatory",
+      "metadata": {
+        "version": "1.0.0",
+        "author": "MPLP Core Team",
+        "createdAt": "2025-06-28T11:34:54Z",
+        "updatedAt": "2025-06-28T11:34:54Z"
+      }
+    },
+    {
+      "ruleId": "BPR-003",
+      "name": "Stakeholder Engagement Process",
+      "category": "stakeholder_management",
+      "scope": "global",
+      "priority": "high",
+      "description": "Rules governing stakeholder identification, analysis, engagement, and communication throughout the project",
+      "stakeholderCategories": {
+        "internal": {
+          "executive": {
+            "roles": ["ceo", "cto", "cfo", "business_unit_heads"],
+            "interests": ["strategic_alignment", "roi", "risk_management", "competitive_advantage"],
+            "influence": "high",
+            "engagementStrategy": "regular_executive_briefings_and_steering_committee_participation"
+          },
+          "management": {
+            "roles": ["project_sponsors", "department_managers", "team_leads"],
+            "interests": ["project_success", "resource_optimization", "team_development", "operational_efficiency"],
+            "influence": "high",
+            "engagementStrategy": "regular_status_meetings_and_decision_involvement"
+          },
+          "operational": {
+            "roles": ["project_team_members", "end_users", "support_staff"],
+            "interests": ["job_security", "skill_development", "workload_management", "tool_usability"],
+            "influence": "medium",
+            "engagementStrategy": "regular_team_meetings_and_feedback_sessions"
+          }
+        },
+        "external": {
+          "customers": {
+            "roles": ["end_customers", "customer_representatives", "user_groups"],
+            "interests": ["product_quality", "delivery_timeline", "cost_effectiveness", "support_quality"],
+            "influence": "high",
+            "engagementStrategy": "regular_customer_reviews_and_feedback_incorporation"
+          },
+          "suppliers": {
+            "roles": ["vendors", "contractors", "technology_partners"],
+            "interests": ["contract_fulfillment", "payment_terms", "long_term_relationship", "scope_clarity"],
+            "influence": "medium",
+            "engagementStrategy": "regular_vendor_meetings_and_performance_reviews"
+          },
+          "regulatory": {
+            "roles": ["regulatory_bodies", "compliance_officers", "auditors"],
+            "interests": ["regulatory_compliance", "risk_mitigation", "transparency", "accountability"],
+            "influence": "high",
+            "engagementStrategy": "formal_compliance_reporting_and_audit_cooperation"
+          }
+        }
+      },
+      "stakeholderAnalysis": {
+        "identification": {
+          "methods": ["brainstorming", "stakeholder_interviews", "organizational_analysis", "document_review"],
+          "criteria": {
+            "impact": "degree_of_impact_on_project_success",
+            "influence": "ability_to_influence_project_decisions",
+            "interest": "level_of_interest_in_project_outcomes",
+            "attitude": "supportive_neutral_or_resistant_to_project"
+          }
+        },
+        "classification": {
+          "powerInterestGrid": {
+            "highPowerHighInterest": "manage_closely",
+            "highPowerLowInterest": "keep_satisfied",
+            "lowPowerHighInterest": "keep_informed",
+            "lowPowerLowInterest": "monitor"
+          },
+          "influenceImpactGrid": {
+            "highInfluenceHighImpact": "key_stakeholders",
+            "highInfluenceLowImpact": "opinion_leaders",
+            "lowInfluenceHighImpact": "context_setters",
+            "lowInfluenceLowImpact": "crowd"
+          }
+        },
+        "prioritization": {
+          "criteria": {
+            "decisionMakingAuthority": "ability_to_make_or_influence_key_decisions",
+            "resourceControl": "control_over_project_resources",
+            "expertiseValue": "valuable_expertise_or_knowledge",
+            "networkInfluence": "influence_within_broader_network"
+          },
+          "priorityLevels": {
+            "critical": "essential_for_project_success",
+            "important": "significant_impact_on_project",
+            "moderate": "some_impact_on_project",
+            "low": "minimal_impact_on_project"
+          }
+        }
+      },
+      "engagementStrategies": {
+        "communication": {
+          "channels": {
+            "formal": ["written_reports", "presentations", "official_meetings", "email_communications"],
+            "informal": ["casual_conversations", "coffee_meetings", "social_events", "corridor_discussions"]
+          },
+          "frequency": {
+            "critical_stakeholders": "weekly_or_bi_weekly",
+            "important_stakeholders": "bi_weekly_or_monthly",
+            "moderate_stakeholders": "monthly_or_quarterly",
+            "low_priority_stakeholders": "quarterly_or_as_needed"
+          },
+          "content": {
+            "executives": "high_level_status_strategic_issues_and_decisions",
+            "managers": "detailed_progress_resource_needs_and_risks",
+            "team_members": "task_level_details_and_immediate_concerns",
+            "customers": "delivery_progress_and_quality_updates"
+          }
+        },
+        "involvement": {
+          "decisionMaking": {
+            "consensus": "seek_consensus_on_major_decisions",
+            "consultation": "consult_before_making_decisions",
+            "information": "inform_after_decisions_are_made",
+            "delegation": "delegate_decision_making_authority"
+          },
+          "participationLevels": {
+            "leadership": "lead_specific_project_activities",
+            "collaboration": "work_together_on_project_tasks",
+            "consultation": "provide_input_and_feedback",
+            "information": "receive_project_information"
+          }
+        },
+        "conflictResolution": {
+          "preventiveMeasures": {
+            "clearExpectations": "establish_clear_roles_and_expectations",
+            "regularCommunication": "maintain_open_communication_channels",
+            "earlyWarning": "implement_early_warning_systems",
+            "relationshipBuilding": "invest_in_relationship_building"
+          },
+          "resolutionProcess": {
+            "identification": "early_identification_of_conflicts",
+            "analysis": "understand_root_causes_and_positions",
+            "mediation": "facilitate_collaborative_problem_solving",
+            "escalation": "escalate_to_higher_authority_if_needed"
+          }
+        }
+      },
+      "conditions": {
+        "when": "stakeholder_engagement_required",
+        "context": "multi_stakeholder_project_environment"
+      },
+      "actions": {
+        "then": "execute_stakeholder_engagement_strategy",
+        "onSuccess": "maintain_stakeholder_satisfaction_and_support",
+        "onFailure": "escalate_stakeholder_issues_and_conflicts"
+      },
+      "enforcement": "mandatory",
+      "metadata": {
+        "version": "1.0.0",
+        "author": "MPLP Core Team",
+        "createdAt": "2025-06-28T11:34:54Z",
+        "updatedAt": "2025-06-28T11:34:54Z"
+      }
+    }
+  ]
+}

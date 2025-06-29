@@ -1,0 +1,373 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MPLP Error Handling Rules",
+  "description": "Rules for handling errors, exceptions, and recovery procedures in MPLP protocols",
+  "version": "1.0.0",
+  "errorHandlingRules": [
+    {
+      "ruleId": "ERROR-001",
+      "name": "Protocol Execution Failure",
+      "category": "execution",
+      "scope": "global",
+      "priority": "high",
+      "description": "Handle protocol execution failures with appropriate recovery strategies",
+      "errorTypes": ["execution_timeout", "resource_unavailable", "validation_failure", "dependency_failure"],
+      "recoveryStrategies": {
+        "execution_timeout": "retry_with_extended_timeout",
+        "resource_unavailable": "wait_and_retry",
+        "validation_failure": "rollback_and_fix",
+        "dependency_failure": "resolve_dependency_first"
+      },
+      "conditions": {
+        "when": "protocol_execution_fails",
+        "context": "error_recovery_enabled"
+      },
+      "actions": {
+        "then": "execute_recovery_strategy",
+        "else": "fail_fast_and_notify"
+      },
+      "enforcement": "mandatory",
+      "metadata": {
+        "version": "1.0.0",
+        "author": "MPLP Core Team",
+        "createdAt": "2025-06-28T11:34:54Z",
+        "updatedAt": "2025-06-28T11:34:54Z"
+      }
+    },
+    {
+      "ruleId": "ERROR-002",
+      "name": "Context Protocol Errors",
+      "category": "execution",
+      "scope": "Context",
+      "priority": "high",
+      "description": "Specific error handling for Context protocol failures",
+      "errorTypes": ["context_gathering_failure", "context_validation_error", "context_update_conflict"],
+      "recoveryActions": {
+        "context_gathering_failure": {
+          "action": "retry_with_alternative_sources",
+          "maxRetries": 3,
+          "backoffStrategy": "exponential"
+        },
+        "context_validation_error": {
+          "action": "request_manual_validation",
+          "escalation": "project_manager"
+        },
+        "context_update_conflict": {
+          "action": "merge_conflicts_automatically",
+          "fallback": "request_manual_resolution"
+        }
+      },
+      "conditions": {
+        "when": "context_protocol_error",
+        "context": "context_protocol_active"
+      },
+      "actions": {
+        "then": "apply_context_specific_recovery",
+        "else": "use_generic_error_handling"
+      },
+      "enforcement": "mandatory",
+      "metadata": {
+        "version": "1.0.0",
+        "author": "MPLP Core Team",
+        "createdAt": "2025-06-28T11:34:54Z",
+        "updatedAt": "2025-06-28T11:34:54Z"
+      }
+    },
+    {
+      "ruleId": "ERROR-003",
+      "name": "Plan Protocol Errors",
+      "category": "execution",
+      "scope": "Plan",
+      "priority": "high",
+      "description": "Specific error handling for Plan protocol failures",
+      "errorTypes": ["plan_validation_failure", "resource_estimation_error", "timeline_conflict"],
+      "recoveryActions": {
+        "plan_validation_failure": {
+          "action": "return_to_drafting_state",
+          "notification": "plan_author"
+        },
+        "resource_estimation_error": {
+          "action": "recalculate_with_historical_data",
+          "fallback": "request_expert_review"
+        },
+        "timeline_conflict": {
+          "action": "auto_adjust_timeline",
+          "constraints": "maintain_critical_path"
+        }
+      },
+      "conditions": {
+        "when": "plan_protocol_error",
+        "context": "plan_protocol_active"
+      },
+      "actions": {
+        "then": "apply_plan_specific_recovery",
+        "else": "use_generic_error_handling"
+      },
+      "enforcement": "mandatory",
+      "metadata": {
+        "version": "1.0.0",
+        "author": "MPLP Core Team",
+        "createdAt": "2025-06-28T11:34:54Z",
+        "updatedAt": "2025-06-28T11:34:54Z"
+      }
+    },
+    {
+      "ruleId": "ERROR-004",
+      "name": "Execute Protocol Errors",
+      "category": "execution",
+      "scope": "Execute",
+      "priority": "high",
+      "description": "Specific error handling for Execute protocol failures",
+      "errorTypes": ["execution_failure", "resource_exhaustion", "quality_threshold_breach"],
+      "recoveryActions": {
+        "execution_failure": {
+          "action": "analyze_failure_cause",
+          "retryStrategy": "incremental_retry",
+          "maxRetries": 3
+        },
+        "resource_exhaustion": {
+          "action": "request_additional_resources",
+          "fallback": "scale_down_execution"
+        },
+        "quality_threshold_breach": {
+          "action": "trigger_quality_review",
+          "escalation": "quality_assurance_team"
+        }
+      },
+      "conditions": {
+        "when": "execute_protocol_error",
+        "context": "execute_protocol_active"
+      },
+      "actions": {
+        "then": "apply_execute_specific_recovery",
+        "else": "use_generic_error_handling"
+      },
+      "enforcement": "mandatory",
+      "metadata": {
+        "version": "1.0.0",
+        "author": "MPLP Core Team",
+        "createdAt": "2025-06-28T11:34:54Z",
+        "updatedAt": "2025-06-28T11:34:54Z"
+      }
+    },
+    {
+      "ruleId": "ERROR-005",
+      "name": "Role Protocol Errors",
+      "category": "execution",
+      "scope": "Role",
+      "priority": "high",
+      "description": "Specific error handling for Role protocol failures",
+      "errorTypes": ["role_assignment_failure", "capability_mismatch", "availability_conflict"],
+      "recoveryActions": {
+        "role_assignment_failure": {
+          "action": "find_alternative_agent",
+          "criteria": "similar_capabilities"
+        },
+        "capability_mismatch": {
+          "action": "provide_capability_training",
+          "fallback": "reassign_to_qualified_agent"
+        },
+        "availability_conflict": {
+          "action": "reschedule_or_find_backup",
+          "priority": "maintain_critical_path"
+        }
+      },
+      "conditions": {
+        "when": "role_protocol_error",
+        "context": "role_protocol_active"
+      },
+      "actions": {
+        "then": "apply_role_specific_recovery",
+        "else": "use_generic_error_handling"
+      },
+      "enforcement": "mandatory",
+      "metadata": {
+        "version": "1.0.0",
+        "author": "MPLP Core Team",
+        "createdAt": "2025-06-28T11:34:54Z",
+        "updatedAt": "2025-06-28T11:34:54Z"
+      }
+    },
+    {
+      "ruleId": "ERROR-006",
+      "name": "Workflow Protocol Errors",
+      "category": "execution",
+      "scope": "Workflow",
+      "priority": "high",
+      "description": "Specific error handling for Workflow protocol failures",
+      "errorTypes": ["workflow_deadlock", "stage_failure", "condition_evaluation_error"],
+      "recoveryActions": {
+        "workflow_deadlock": {
+          "action": "detect_and_break_deadlock",
+          "strategy": "priority_based_resolution"
+        },
+        "stage_failure": {
+          "action": "retry_stage_or_skip",
+          "decision": "based_on_criticality"
+        },
+        "condition_evaluation_error": {
+          "action": "use_default_condition_value",
+          "logging": "detailed_error_log"
+        }
+      },
+      "conditions": {
+        "when": "workflow_protocol_error",
+        "context": "workflow_protocol_active"
+      },
+      "actions": {
+        "then": "apply_workflow_specific_recovery",
+        "else": "use_generic_error_handling"
+      },
+      "enforcement": "mandatory",
+      "metadata": {
+        "version": "1.0.0",
+        "author": "MPLP Core Team",
+        "createdAt": "2025-06-28T11:34:54Z",
+        "updatedAt": "2025-06-28T11:34:54Z"
+      }
+    },
+    {
+      "ruleId": "ERROR-007",
+      "name": "Delivery Protocol Errors",
+      "category": "execution",
+      "scope": "Delivery",
+      "priority": "high",
+      "description": "Specific error handling for Delivery protocol failures",
+      "errorTypes": ["deliverable_validation_failure", "dependency_unavailable", "delivery_rejection"],
+      "recoveryActions": {
+        "deliverable_validation_failure": {
+          "action": "return_to_preparation_stage",
+          "notification": "delivery_team"
+        },
+        "dependency_unavailable": {
+          "action": "negotiate_alternative_dependency",
+          "escalation": "project_coordinator"
+        },
+        "delivery_rejection": {
+          "action": "analyze_rejection_reasons",
+          "followup": "create_improvement_plan"
+        }
+      },
+      "conditions": {
+        "when": "delivery_protocol_error",
+        "context": "delivery_protocol_active"
+      },
+      "actions": {
+        "then": "apply_delivery_specific_recovery",
+        "else": "use_generic_error_handling"
+      },
+      "enforcement": "mandatory",
+      "metadata": {
+        "version": "1.0.0",
+        "author": "MPLP Core Team",
+        "createdAt": "2025-06-28T11:34:54Z",
+        "updatedAt": "2025-06-28T11:34:54Z"
+      }
+    },
+    {
+      "ruleId": "ERROR-008",
+      "name": "Cross-Protocol Error Propagation",
+      "category": "execution",
+      "scope": "global",
+      "priority": "medium",
+      "description": "Rules for handling error propagation between protocols",
+      "propagationRules": {
+        "critical_errors": "propagate_immediately",
+        "recoverable_errors": "attempt_local_recovery_first",
+        "warning_errors": "log_and_continue"
+      },
+      "isolationStrategies": {
+        "Context_errors": "isolate_to_context_scope",
+        "Plan_errors": "may_affect_execute_and_test",
+        "Execute_errors": "may_affect_test_and_delivery",
+        "Role_errors": "may_affect_workflow_execution"
+      },
+      "conditions": {
+        "when": "error_occurs_in_protocol",
+        "context": "multiple_protocols_active"
+      },
+      "actions": {
+        "then": "apply_propagation_and_isolation_rules",
+        "else": "handle_error_locally"
+      },
+      "enforcement": "recommended",
+      "metadata": {
+        "version": "1.0.0",
+        "author": "MPLP Core Team",
+        "createdAt": "2025-06-28T11:34:54Z",
+        "updatedAt": "2025-06-28T11:34:54Z"
+      }
+    },
+    {
+      "ruleId": "ERROR-009",
+      "name": "Error Logging and Monitoring",
+      "category": "execution",
+      "scope": "global",
+      "priority": "medium",
+      "description": "Rules for comprehensive error logging and monitoring",
+      "loggingRequirements": {
+        "error_level": "detailed_stack_trace",
+        "warning_level": "summary_with_context",
+        "info_level": "basic_information"
+      },
+      "monitoringMetrics": {
+        "error_frequency": "errors_per_hour",
+        "recovery_success_rate": "percentage",
+        "mean_time_to_recovery": "minutes"
+      },
+      "alertingThresholds": {
+        "critical_error_rate": 5,
+        "recovery_failure_rate": 20,
+        "protocol_timeout_rate": 10
+      },
+      "conditions": {
+        "when": "error_occurs",
+        "context": "monitoring_enabled"
+      },
+      "actions": {
+        "then": "log_and_monitor_according_to_rules",
+        "else": "use_basic_logging"
+      },
+      "enforcement": "recommended",
+      "metadata": {
+        "version": "1.0.0",
+        "author": "MPLP Core Team",
+        "createdAt": "2025-06-28T11:34:54Z",
+        "updatedAt": "2025-06-28T11:34:54Z"
+      }
+    },
+    {
+      "ruleId": "ERROR-010",
+      "name": "Circuit Breaker Pattern",
+      "category": "execution",
+      "scope": "global",
+      "priority": "medium",
+      "description": "Implement circuit breaker pattern to prevent cascade failures",
+      "circuitBreakerConfig": {
+        "failure_threshold": 5,
+        "timeout_duration": 60,
+        "recovery_timeout": 300
+      },
+      "protectedOperations": [
+        "external_service_calls",
+        "resource_intensive_operations",
+        "cross_protocol_communications"
+      ],
+      "conditions": {
+        "when": "failure_threshold_exceeded",
+        "context": "circuit_breaker_enabled"
+      },
+      "actions": {
+        "then": "open_circuit_and_fail_fast",
+        "else": "continue_normal_operation"
+      },
+      "enforcement": "recommended",
+      "metadata": {
+        "version": "1.0.0",
+        "author": "MPLP Core Team",
+        "createdAt": "2025-06-28T11:34:54Z",
+        "updatedAt": "2025-06-28T11:34:54Z"
+      }
+    }
+  ]
+}
