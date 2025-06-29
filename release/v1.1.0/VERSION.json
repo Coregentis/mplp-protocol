@@ -1,0 +1,50 @@
+{
+  "version": "1.1.0",
+  "release_date": "2025-06-29",
+  "release_type": "minor",
+  "compatibility": {
+    "backward_compatible": true,
+    "forward_compatible": true,
+    "breaking_changes": false
+  },
+  "features": {
+    "new_modules": [
+      "Enhanced protocol modules",
+      "Improved documentation structure",
+      "Extended demonstration components",
+      "Advanced script tools"
+    ],
+    "enhancements": [
+      "Extended field definitions",
+      "Enhanced execution models",
+      "Improved examples and use cases",
+      "Better version system architecture",
+      "Enhanced documentation website structure"
+    ]
+  },
+  "supported_languages": [
+    "English",
+    "Chinese (Simplified)",
+    "Chinese (Traditional)"
+  ],
+  "license": "Dual License: MIT OR Apache-2.0",
+  "schema_version": "2020-12",
+  "protocol_modules": [
+    "Role",
+    "Context",
+    "Plan",
+    "Execute",
+    "Test",
+    "Delivery",
+    "Learn",
+    "Confirm",
+    "Trace",
+    "Workflow"
+  ],
+  "checksum_algorithm": "SHA-256",
+  "build_info": {
+    "build_date": "2025-06-29T08:38:08Z",
+    "build_environment": "release",
+    "total_files": 124
+  }
+}

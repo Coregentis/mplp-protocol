@@ -1,0 +1,201 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coregentis.org/schemas/v1.0/Role.schema.json",
+  "version": "1.0.0",
+  "title": "MPLP.Role Schema",
+  "description": "Schema for defining agent roles, capabilities, and tool bindings in multi-agent systems.",
+  "type": "object",
+  "properties": {
+    "roleId": {
+      "type": "string",
+      "description": "Unique identifier for the role definition."
+    },
+    "roleName": {
+      "type": "string",
+      "description": "Human-readable name of the role."
+    },
+    "roleType": {
+      "type": "string",
+      "enum": ["basic", "composite", "specialized"],
+      "description": "Type of role: basic (single responsibility), composite (multiple capabilities), specialized (domain-specific)."
+    },
+    "capabilities": {
+      "type": "array",
+      "description": "List of capabilities this role provides.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "capabilityId": {
+            "type": "string",
+            "description": "Unique identifier for the capability."
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the capability."
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of what this capability does."
+          },
+          "category": {
+            "type": "string",
+            "enum": ["planning", "execution", "analysis", "communication", "coordination"],
+            "description": "Category of the capability."
+          }
+        },
+        "required": ["capabilityId", "name", "category"]
+      }
+    },
+    "toolBindings": {
+      "type": "object",
+      "description": "Three-layer tool binding structure.",
+      "properties": {
+        "necessary": {
+          "type": "array",
+          "description": "Essential tools required for basic role functionality.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "toolId": {
+                "type": "string",
+                "description": "Identifier of the tool."
+              },
+              "toolName": {
+                "type": "string",
+                "description": "Name of the tool."
+              },
+              "mcpServer": {
+                "type": "string",
+                "description": "MCP server providing this tool."
+              },
+              "bindingType": {
+                "type": "string",
+                "enum": ["required", "fallback"],
+                "description": "How this tool is bound to the role."
+              }
+            },
+            "required": ["toolId", "toolName", "bindingType"]
+          }
+        },
+        "recommended": {
+          "type": "array",
+          "description": "Tools that enhance role performance.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "toolId": {
+                "type": "string",
+                "description": "Identifier of the tool."
+              },
+              "toolName": {
+                "type": "string",
+                "description": "Name of the tool."
+              },
+              "mcpServer": {
+                "type": "string",
+                "description": "MCP server providing this tool."
+              },
+              "priority": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 10,
+                "description": "Priority level (1-10, higher is more important)."
+              }
+            },
+            "required": ["toolId", "toolName", "priority"]
+          }
+        },
+        "custom": {
+          "type": "array",
+          "description": "Project-specific or domain-specific tools.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "toolId": {
+                "type": "string",
+                "description": "Identifier of the tool."
+              },
+              "toolName": {
+                "type": "string",
+                "description": "Name of the tool."
+              },
+              "mcpServer": {
+                "type": "string",
+                "description": "MCP server providing this tool."
+              },
+              "domain": {
+                "type": "string",
+                "description": "Domain or project context for this tool."
+              },
+              "configuration": {
+                "type": "object",
+                "description": "Custom configuration for the tool.",
+                "additionalProperties": true
+              }
+            },
+            "required": ["toolId", "toolName", "domain"]
+          }
+        }
+      },
+      "required": ["necessary"]
+    },
+    "dependencies": {
+      "type": "array",
+      "description": "Other roles this role depends on.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "roleId": {
+            "type": "string",
+            "description": "ID of the dependent role."
+          },
+          "dependencyType": {
+            "type": "string",
+            "enum": ["requires", "collaborates", "supervises", "reports_to"],
+            "description": "Type of dependency relationship."
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of the dependency."
+          }
+        },
+        "required": ["roleId", "dependencyType"]
+      }
+    },
+    "metaGPTCompatibility": {
+      "type": "object",
+      "description": "MetaGPT framework compatibility information.",
+      "properties": {
+        "roleClass": {
+          "type": "string",
+          "description": "Corresponding MetaGPT role class."
+        },
+        "actions": {
+          "type": "array",
+          "description": "MetaGPT actions this role can perform.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "watchedMessages": {
+          "type": "array",
+          "description": "Message types this role watches for.",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the role was defined."
+    },
+    "version": {
+      "type": "string",
+      "description": "Version of the role definition."
+    }
+  },
+  "required": ["roleId", "roleName", "roleType", "capabilities", "toolBindings", "createdAt"],
+  "additionalProperties": true
+}

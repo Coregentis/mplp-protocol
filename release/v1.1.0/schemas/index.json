@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coregentis.org/schemas/v1.0/index.json",
+  "version": "1.0.0",
+  "title": "MPLP Schema Index",
+  "description": "Index of all Multi-Agent Project Lifecycle Protocol schemas",
+  "type": "object",
+  "properties": {
+    "Context": {
+      "$ref": "Context.schema.json"
+    },
+    "Plan": {
+      "$ref": "Plan.schema.json"
+    },
+    "Confirm": {
+      "$ref": "Confirm.schema.json"
+    },
+    "Execute": {
+      "$ref": "Execute.schema.json"
+    },
+    "Learn": {
+      "$ref": "Learn.schema.json"
+    },
+    "Trace": {
+      "$ref": "Trace.schema.json"
+    },
+    "Test": {
+      "$ref": "Test.schema.json"
+    },
+    "Role": {
+      "$ref": "Role.schema.json"
+    },
+    "Workflow": {
+      "$ref": "Workflow.schema.json"
+    },
+    "Delivery": {
+      "$ref": "Delivery.schema.json"
+    }
+  },
+  "required": ["Context", "Plan", "Confirm", "Execute", "Learn", "Trace", "Test", "Role", "Workflow", "Delivery"]
+}
