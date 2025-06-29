@@ -1,0 +1,56 @@
+{
+  "version": "1.0.4",
+  "release_date": "2025-06-29",
+  "release_timestamp": "2025-06-29T18:16:05+08:00",
+  "release_type": "stable",
+  "release_name": "Core-based clean release with full English localization",
+  "compatibility": {
+    "backward_compatible": true,
+    "minimum_version": "1.0.0",
+    "breaking_changes": false
+  },
+  "package_info": {
+    "type": "core-based",
+    "source": "Core directory",
+    "language": "English (primary)",
+    "multi_language_support": true,
+    "supported_languages": ["en", "zh", "tw"]
+  },
+  "components": {
+    "protocols": 10,
+    "schemas": 10,
+    "examples": 10,
+    "rules": 75,
+    "rule_categories": 6,
+    "documentation_languages": 3
+  },
+  "licensing": {
+    "strategy": "dual",
+    "apache_2_0": "Core protocols, schemas, rules, architecture",
+    "mit": "Examples, implementations, tools, tests"
+  },
+  "repository": {
+    "url": "https://github.com/Coregentis/MPLP-Protocol",
+    "owner": "Coregentis",
+    "type": "public"
+  },
+  "build_info": {
+    "build_date": "2025-06-29T18:16:05+08:00",
+    "build_type": "release",
+    "source_commit": "main",
+    "builder": "MPLP Release Bot"
+  },
+  "quality_assurance": {
+    "schema_validation": true,
+    "example_validation": true,
+    "content_review": true,
+    "integrity_check": true
+  },
+  "metadata": {
+    "description": "Multi-Agent Project Lifecycle Protocol - The TCP/IP of Multi-Agent AI Collaboration",
+    "keywords": ["multi-agent", "AI", "protocol", "collaboration", "lifecycle", "standardization"],
+    "category": "AI Protocol",
+    "maturity": "stable",
+    "status": "frozen"
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "roleId": "role-planner-001",
+  "roleName": "Research Planner",
+  "roleType": "specialized",
+  "capabilities": [
+    {
+      "capabilityId": "cap-planning-001",
+      "name": "Task Decomposition",
+      "description": "Break down complex research goals into manageable tasks",
+      "category": "planning"
+    },
+    {
+      "capabilityId": "cap-analysis-001",
+      "name": "Resource Analysis",
+      "description": "Analyze available resources and constraints for task planning",
+      "category": "analysis"
+    }
+  ],
+  "toolBindings": {
+    "necessary": [
+      {
+        "toolId": "tool-search-001",
+        "toolName": "Academic Search",
+        "mcpServer": "research-tools",
+        "bindingType": "required"
+      }
+    ],
+    "recommended": [
+      {
+        "toolId": "tool-calendar-001",
+        "toolName": "Task Scheduler",
+        "mcpServer": "productivity-tools",
+        "priority": 8
+      }
+    ],
+    "custom": [
+      {
+        "toolId": "tool-domain-001",
+        "toolName": "Literature Database",
+        "description": "Access to specialized academic databases",
+        "configuration": {
+          "apiKey": "${ACADEMIC_API_KEY}",
+          "databases": ["IEEE", "ACM", "arXiv"]
+        }
+      }
+    ]
+  },
+  "constraints": {
+    "performance": {
+      "maxConcurrentTasks": 5,
+      "timeoutSeconds": 300
+    },
+    "resources": {
+      "memoryLimitMB": 512,
+      "cpuLimitPercent": 50
+    },
+    "security": {
+      "accessLevel": "read-write",
+      "allowedDomains": ["academic", "research"]
+    }
+  },
+  "metadata": {
+    "createdAt": "2025-06-28T10:00:00Z",
+    "version": "1.0.0",
+    "author": "MPLP Team",
+    "tags": ["research", "planning", "academic"]
+  }
+}

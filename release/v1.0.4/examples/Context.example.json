@@ -1,0 +1,22 @@
+{
+  "contextId": "ctx-20240601-001",
+  "projectName": "Autonomous Research Agents",
+  "createdAt": "2025-06-28T10:00:00Z",
+  "agentStates": [
+    {
+      "agentId": "agent-01",
+      "role": "planner",
+      "status": "active"
+    },
+    {
+      "agentId": "agent-02",
+      "role": "executor",
+      "status": "idle"
+    }
+  ],
+  "memory": {
+    "latestTask": "Plan literature review",
+    "lastError": null,
+    "sharedNote": "Use IEEE format for citations"
+  }
+}

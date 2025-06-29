@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coregentis.org/schemas/v1.0/Trace.schema.json",
+  "version": "1.0.0",
+  "title": "MPLP.Trace Schema",
+  "description": "Schema for recording and querying all traceable events, state changes, and transitions in a multi-agent project.",
+  "type": "object",
+  "properties": {
+    "traceId": {
+      "type": "string",
+      "description": "Unique identifier for the trace entry."
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Time at which the event was recorded."
+    },
+    "source": {
+      "type": "string",
+      "description": "Origin of the event (e.g., Context, Execute, Learn, Test, external API)."
+    },
+    "agentId": {
+      "type": "string",
+      "description": "Optional agent involved in the event."
+    },
+    "eventType": {
+      "type": "string",
+      "enum": ["state_change", "action", "error", "message", "confirmation", "execution_log", "external_call"],
+      "description": "Type of event being recorded."
+    },
+    "eventDetails": {
+      "type": "object",
+      "description": "Structured details about the event.",
+      "additionalProperties": true
+    },
+    "relatedObject": {
+      "type": "string",
+      "description": "Optional reference to an associated object (e.g., taskId, executionId, learningId)."
+    },
+    "tags": {
+      "type": "array",
+      "description": "Optional tags for querying/filtering trace entries.",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": ["traceId", "timestamp", "source", "eventType"],
+  "additionalProperties": true
+}

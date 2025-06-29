@@ -1,0 +1,48 @@
+{
+  "testId": "test-20240601-001",
+  "relatedTaskId": "task-20240601-001",
+  "testType": "integration",
+  "input": {
+    "query": "multi-agent planning"
+  },
+  "expectedOutput": {
+    "resultsCount": 5
+  },
+  "agentId": "agent-01",
+  "generatedAt": "2025-06-28T10:30:00Z",
+  "testCases": [
+    {
+      "caseId": "case-001",
+      "description": "Ensure agent returns 5 results for valid input",
+      "input": {
+        "query": "multi-agent planning"
+      },
+      "expectedOutput": {
+        "resultsCount": 5
+      },
+      "actualOutput": {
+        "resultsCount": 5
+      },
+      "status": "passed"
+    },
+    {
+      "caseId": "case-002",
+      "description": "Check error when query is empty",
+      "input": {
+        "query": ""
+      },
+      "expectedOutput": {
+        "error": "Empty query"
+      },
+      "actualOutput": {
+        "error": "Empty query"
+      },
+      "status": "passed"
+    }
+  ],
+  "summary": {
+    "totalCases": 2,
+    "passed": 2,
+    "failed": 0
+  }
+}
