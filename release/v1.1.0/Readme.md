@@ -124,21 +124,79 @@ MPLP-v1.1.0/
 
 ### 🤝 Contributing
 
-We welcome contributions! Please see our contribution guidelines:
+We welcome community contributions! Here's how you can help:
 
-- **🐛 Bug Reports**: [GitHub Issues](https://github.com/Coregentis/Multi_Agent_Project_Lifecycle_Protocol/issues)
-- **💡 Feature Requests**: [GitHub Discussions](https://github.com/Coregentis/Multi_Agent_Project_Lifecycle_Protocol/discussions)
-- **📝 Documentation**: Help improve our multi-language docs
-- **🔧 Protocol Enhancements**: Propose new protocol modules
-- **🌍 Translations**: Add support for new languages
+#### For Protocol Development
+- 🔬 **Research**: Join discussions in our community forums
+- 📝 **Documentation**: Improve existing docs or add new language support
+- 🧪 **Examples**: Contribute real-world usage examples
+- 🐛 **Issues**: Report bugs or suggest improvements
+
+#### For Tooling Ecosystem
+- 🔧 **Tools**: Build validation, visualization, or integration tools
+- 📦 **Libraries**: Create language-specific implementations
+- 🌐 **Integrations**: Connect MPLP with existing platforms
+
+#### Getting Started
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+See our [Contributing Guidelines](https://github.com/Coregentis/mplp-protocol/blob/main/CONTRIBUTING.md) for detailed information.
+
+### 👥 About Coregentis
+
+**Building the open standard for multi-agent AI collaboration.**  
+🌐 Coregentis | 🧠 MPLP Protocol | 🔧 Agent Development Tools  
+→ [https://github.com/Coregentis/mplp-protocol](https://github.com/Coregentis/mplp-protocol)  
+→ team@coregentis.ai
+
+### 🚀 Project Status
+
+- **Current Version**: v1.1.0 (Stable & Production Ready) ✅
+- **Next Version**: v1.2.0 (In Planning)
+- **Development**: Active tooling ecosystem development
+- **Community**: Welcoming contributors and feedback
+
+### 🛠️ Development
+
+#### Prerequisites
+
+- Node.js 16+ (for validation tools)
+- Git
+- Text editor with JSON/Markdown support
+
+#### Validation
+
+```bash
+# Validate all schemas
+npm run validate:schemas
+
+# Validate examples
+npm run validate:examples
+
+# Run all tests
+npm test
+```
 
 ### 📞 Support & Community
 
-- **📧 Email**: support@coregentis.com
-- **💬 Discord**: [Join our community](https://discord.gg/mplp)
-- **📖 Documentation**: [docs/](docs/)
-- **🐛 Issues**: [GitHub Issues](https://github.com/Coregentis/Multi_Agent_Project_Lifecycle_Protocol/issues)
-- **📊 Roadmap**: [Project Roadmap](https://github.com/Coregentis/Multi_Agent_Project_Lifecycle_Protocol/projects)
+#### 💬 Technical Support
+- **Issues**: [GitHub Issues](https://github.com/Coregentis/mplp-protocol/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/Coregentis/mplp-protocol/discussions)
+- **Documentation**: [Protocol Documentation](./docs/)
+- **Email**: team@coregentis.ai
+
+#### 🌐 Follow Us
+- **Substack**: [https://substack.com/@coregentisai](https://substack.com/@coregentisai)
+- **Hacker News**: [https://news.ycombinator.com/user?id=CoregentisAI](https://news.ycombinator.com/user?id=CoregentisAI)
+- **Dev.to**: [https://dev.to/jearonwong](https://dev.to/jearonwong)
+- **Medium**: [https://medium.com/coregentisai](https://medium.com/coregentisai)
+- **X (Twitter)**: [https://x.com/CoregentisAI](https://x.com/CoregentisAI)
+- **Product Hunt**: [https://www.producthunt.com/@coregentis_ai](https://www.producthunt.com/@coregentis_ai)
 
 ### 🔖 Version Information
 
@@ -222,12 +280,31 @@ We welcome contributions! Please see our contribution guidelines:
 
 ---
 
+### 🏆 Acknowledgments
+
+- **Design Team**: Coregentis Project Team
+- **Contributors**: All community members who helped shape MPLP
+- **Inspiration**: The growing need for standardized multi-agent collaboration
+
+---
+
 <div align="center">
 
-**Built with ❤️ by the Coregentis Team**
+**Made with ❤️ by the Coregentis Team**
+
+[⭐ Star this project](https://github.com/Coregentis/mplp-protocol) | [🐛 Report Bug](https://github.com/Coregentis/mplp-protocol/issues) | [💡 Request Feature](https://github.com/Coregentis/mplp-protocol/issues) | [📖 Documentation](./docs/)
+
+**"Standardizing the future of multi-agent collaboration"**
 
 *Making multi-agent AI collaboration as standardized and reliable as the internet itself.*
 
 **Version**: 1.1.0 | **Release Date**: 2025-06-29 | **License**: Apache 2.0 + MIT
 
 </div>
+
+## 📜 License
+
+This project is licensed under dual licensing - see the [LICENSE](License/) files for details.
+
+- **Apache 2.0**: For core protocols and schemas
+- **MIT**: For examples and implementation tools
