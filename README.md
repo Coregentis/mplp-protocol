@@ -126,8 +126,8 @@ MPLP-v1.1.0/
 
 We welcome contributions! Please see our contribution guidelines:
 
-- **🐛 Bug Reports**: [GitHub Issues](https://github.com/Coregentis/Multi_Agent_Project_Lifecycle_Protocol/issues)
-- **💡 Feature Requests**: [GitHub Discussions](https://github.com/Coregentis/Multi_Agent_Project_Lifecycle_Protocol/discussions)
+- **🐛 Bug Reports**: [GitHub Issues](https://github.com/Coregentis/MPLP-Protocol/issues)
+- **💡 Feature Requests**: [GitHub Discussions](https://github.com/Coregentis/MPLP-Protocol/discussions)
 - **📝 Documentation**: Help improve our multi-language docs
 - **🔧 Protocol Enhancements**: Propose new protocol modules
 - **🌍 Translations**: Add support for new languages
@@ -137,8 +137,8 @@ We welcome contributions! Please see our contribution guidelines:
 - **📧 Email**: support@coregentis.com
 - **💬 Discord**: [Join our community](https://discord.gg/mplp)
 - **📖 Documentation**: [docs/](docs/)
-- **🐛 Issues**: [GitHub Issues](https://github.com/Coregentis/Multi_Agent_Project_Lifecycle_Protocol/issues)
-- **📊 Roadmap**: [Project Roadmap](https://github.com/Coregentis/Multi_Agent_Project_Lifecycle_Protocol/projects)
+- **🐛 Issues**: [GitHub Issues](https://github.com/Coregentis/MPLP-Protocol/issues)
+- **📊 Roadmap**: [Project Roadmap](https://github.com/Coregentis/MPLP-Protocol/projects)
 
 ### 🔖 Version Information
 

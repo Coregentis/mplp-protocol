@@ -177,7 +177,7 @@ For users upgrading from previous versions:
 ## Support
 
 For questions or issues:
-- **Repository**: https://github.com/Coregentis/Multi_Agent_Project_Lifecycle_Protocol
+- **Repository**: https://github.com/Coregentis/MPLP-Protocol
 - **Documentation**: See `docs/` directory
 - **Issues**: GitHub Issues tracker
 - **Contact**: Coregentis Team
@@ -318,8 +318,8 @@ Role → Context → Plan → Execute → Test → Delivery → Learn → Confir
 
 We welcome contributions! Please see our contribution guidelines:
 
-- **🐛 Bug Reports**: [GitHub Issues](https://github.com/Coregentis/Multi_Agent_Project_Lifecycle_Protocol/issues)
-- **💡 Feature Requests**: [GitHub Discussions](https://github.com/Coregentis/Multi_Agent_Project_Lifecycle_Protocol/discussions)
+- **🐛 Bug Reports**: [GitHub Issues](https://github.com/Coregentis/MPLP-Protocol/issues)
+- **💡 Feature Requests**: [GitHub Discussions](https://github.com/Coregentis/MPLP-Protocol/discussions)
 - **📝 Documentation**: Help improve our multi-language docs
 - **🔧 Protocol Enhancements**: Propose new protocol modules
 - **🌍 Translations**: Add support for new languages
@@ -329,8 +329,8 @@ We welcome contributions! Please see our contribution guidelines:
 - **📧 Email**: support@coregentis.com
 - **💬 Discord**: [Join our community](https://discord.gg/mplp)
 - **📖 Documentation**: [docs/](docs/)
-- **🐛 Issues**: [GitHub Issues](https://github.com/Coregentis/Multi_Agent_Project_Lifecycle_Protocol/issues)
-- **📊 Roadmap**: [Project Roadmap](https://github.com/Coregentis/Multi_Agent_Project_Lifecycle_Protocol/projects)
+- **🐛 Issues**: [GitHub Issues](https://github.com/Coregentis/MPLP-Protocol/issues)
+- **📊 Roadmap**: [Project Roadmap](https://github.com/Coregentis/MPLP-Protocol/projects)
 
 ---
 
@@ -507,7 +507,7 @@ We welcome contributions to MPLP! Please see our development repository for:
 ## 📞 Support & Contact
 
 - **Team**: Coregentis
-- **Repository**: https://github.com/Coregentis/Multi_Agent_Project_Lifecycle_Protocol
+- **Repository**: https://github.com/Coregentis/MPLP-Protocol
 - **Documentation**: See `docs/` directory
 - **Issues**: GitHub Issues tracker
 
@@ -568,7 +568,7 @@ Licensing: Dual license (Apache 2.0 + MIT)
 
 # Package Information
 Ownership: Coregentis Team
-Repository: https://github.com/Coregentis/Multi_Agent_Project_Lifecycle_Protocol
+Repository: https://github.com/Coregentis/MPLP-Protocol
 File Count: ~59 files (Core content only)
 Excluded: Development files, non-English docs, build artifacts
 
