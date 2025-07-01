@@ -1,0 +1,448 @@
+name: Enhanced CI Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # 每天UTC时间02:00运行
+    - cron: '0 2 * * *'
+  workflow_call:
+    inputs:
+      skip_deployment:
+        description: 'Skip deployment workflows'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  NODE_VERSION: '18.x'
+  CACHE_VERSION: 'v1'
+
+jobs:
+  # 并行测试矩阵
+  test-matrix:
+    name: Test Suite (Node ${{ matrix.node-version }})
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [16.x, 18.x, 20.x]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            cache-path: ~/.npm
+          - os: windows-latest
+            cache-path: ~\AppData\Roaming\npm-cache
+          - os: macos-latest
+            cache-path: ~/.npm
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # 获取完整历史用于更好的缓存
+      
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: 'package-lock.json'
+        
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ${{ matrix.cache-path }}
+          node_modules
+          ~/.cache/pip
+        key: ${{ runner.os }}-deps-${{ env.CACHE_VERSION }}-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-deps-${{ env.CACHE_VERSION }}-
+          ${{ runner.os }}-deps-
+        
+    - name: Install dependencies
+      run: npm ci --prefer-offline --no-audit
+      
+    - name: Create build directories
+      run: |
+        mkdir -p build/reports/coverage
+        mkdir -p build/reports/tests
+        mkdir -p build/reports/security
+        
+    - name: Validate schemas
+      run: npm run validate:schemas
+      
+    - name: Validate examples
+      run: npm run validate:examples
+      
+    - name: Check documentation
+      run: npm run validate:docs
+      
+    - name: Check links
+      run: npm run validate:links
+      continue-on-error: true
+      
+    - name: Run unit tests with coverage
+      run: npm run test:unit -- --coverage --maxWorkers=2
+      
+    - name: Run integration tests
+      run: npm run test:integration
+      
+    - name: Upload coverage to Codecov
+      if: matrix.node-version == '18.x' && matrix.os == 'ubuntu-latest'
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./build/reports/coverage/lcov.info
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+        
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results-${{ matrix.os }}-node-${{ matrix.node-version }}
+        path: |
+          build/reports/
+          jest-html-reporters-attach/
+        retention-days: 30
+
+  # 代码质量检查
+  code-quality:
+    name: Code Quality Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci --prefer-offline --no-audit
+      
+    - name: Run ESLint
+      run: |
+        npm run lint -- --format json --output-file build/reports/eslint.json
+        npm run lint -- --format stylish
+      continue-on-error: true
+      
+    - name: Run Prettier check
+      run: |
+        npx prettier --check "**/*.{js,json,md,yml,yaml}" --write-file build/reports/prettier.log
+      continue-on-error: true
+      
+    - name: Analyze code complexity
+      run: |
+        npm install --save-dev complexity-report
+        mkdir -p build/reports/complexity
+        find scripts tests -name "*.js" -exec npx cr --format json --output build/reports/complexity/complexity.json {} + || true
+        
+    - name: Detect code duplication
+      run: |
+        npm install --save-dev jscpd
+        npx jscpd scripts/ tests/ --reporters json,console --output build/reports/duplication || true
+        
+    - name: Upload quality reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: code-quality-reports
+        path: build/reports/
+        retention-days: 30
+
+  # 安全扫描
+  security-scan:
+    name: Security Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci --prefer-offline --no-audit
+      
+    - name: Run npm audit
+      run: |
+        npm audit --audit-level=moderate --json > build/reports/security/npm-audit.json || true
+        npm audit --audit-level=moderate
+      continue-on-error: true
+      
+    - name: Check for sensitive files
+      run: |
+        echo "Checking for sensitive files..."
+        SENSITIVE_FILES=$(find . -name "*.key" -o -name "*.pem" -o -name ".env" -o -name "*.p12" -o -name "*.pfx" | grep -v node_modules || true)
+        if [ -n "$SENSITIVE_FILES" ]; then
+          echo "⚠️ Found potential sensitive files:"
+          echo "$SENSITIVE_FILES"
+          echo "Please review and ensure these files should be in the repository"
+        else
+          echo "✅ No sensitive files found"
+        fi
+        
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v2
+      with:
+        languages: javascript
+        
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v2
+      
+    - name: Upload security reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-reports
+        path: build/reports/security/
+        retention-days: 30
+
+  # 文档构建和验证
+  documentation:
+    name: Documentation Build & Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci --prefer-offline --no-audit
+      
+    - name: Generate schema documentation
+      run: npm run generate:schema-docs
+      
+    - name: Validate documentation structure
+      run: |
+        echo "Validating documentation structure..."
+        for lang in en zh tw; do
+          if [ -d "docs/$lang" ]; then
+            echo "✅ Found documentation for language: $lang"
+          else
+            echo "⚠️ Missing documentation for language: $lang"
+          fi
+        done
+        
+    - name: Check documentation links
+      run: npm run validate:links
+      continue-on-error: true
+      
+    - name: Upload documentation artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: generated-docs
+        path: docs/
+        retention-days: 7
+
+  # 兼容性检查
+  compatibility-check:
+    name: Version Compatibility Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci --prefer-offline --no-audit
+      
+    - name: Run compatibility validation
+      run: |
+        if [ -f "scripts/validate-compatibility.js" ]; then
+          npm run compatibility:validate
+        else
+          echo "⚠️ Compatibility validation script not found, skipping"
+        fi
+        
+    - name: Check version consistency
+      run: |
+        if [ -f "scripts/check-frozen-integrity.js" ]; then
+          npm run check:frozen
+        else
+          echo "⚠️ Version integrity script not found, skipping"
+        fi
+
+  # 构建验证
+  build-verification:
+    name: Build Verification
+    runs-on: ubuntu-latest
+    needs: [test-matrix, code-quality, security-scan, documentation, compatibility-check]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci --prefer-offline --no-audit
+      
+    - name: Run full build
+      run: |
+        echo "🔨 Starting full build process..."
+        if npm run build:all; then
+          echo "✅ Build completed successfully"
+        else
+          echo "❌ Build failed"
+          exit 1
+        fi
+        
+    - name: Verify build artifacts
+      run: |
+        echo "📦 Verifying build artifacts..."
+        
+        required_paths=(
+          "schemas"
+          "examples"
+          "docs"
+        )
+        
+        for path in "${required_paths[@]}"; do
+          if [ -e "$path" ]; then
+            echo "✅ Found: $path"
+          else
+            echo "❌ Missing: $path"
+            exit 1
+          fi
+        done
+        
+        echo "✅ All required artifacts present"
+        
+    - name: Package for release
+      if: github.ref == 'refs/heads/main'
+      run: |
+        echo "📦 Creating release package..."
+        mkdir -p dist
+        
+        # 复制核心文件
+        cp -r schemas dist/ 2>/dev/null || echo "No schemas directory"
+        cp -r examples dist/ 2>/dev/null || echo "No examples directory"
+        cp -r docs dist/ 2>/dev/null || echo "No docs directory"
+        cp package.json dist/
+        cp README.md dist/ 2>/dev/null || echo "No README.md"
+        cp LICENSE dist/ 2>/dev/null || echo "No LICENSE file"
+        
+        # 创建构建信息
+        cat > dist/build-info.json << EOF
+        {
+          "version": "$(node -p "require('./package.json').version")",
+          "build_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+          "commit": "$GITHUB_SHA",
+          "branch": "$GITHUB_REF_NAME",
+          "workflow_run": "$GITHUB_RUN_NUMBER"
+        }
+        EOF
+        
+        echo "📦 Release package created successfully"
+        
+    - name: Upload build artifacts
+      if: github.ref == 'refs/heads/main'
+      uses: actions/upload-artifact@v3
+      with:
+        name: release-package
+        path: dist/
+        retention-days: 90
+
+  # 质量门禁汇总
+  quality-gates-summary:
+    name: Quality Gates Summary
+    runs-on: ubuntu-latest
+    needs: [test-matrix, code-quality, security-scan, documentation, compatibility-check, build-verification]
+    if: always()
+    
+    steps:
+    - name: Collect results
+      id: results
+      run: |
+        echo "test_result=${{ needs.test-matrix.result }}" >> $GITHUB_OUTPUT
+        echo "quality_result=${{ needs.code-quality.result }}" >> $GITHUB_OUTPUT
+        echo "security_result=${{ needs.security-scan.result }}" >> $GITHUB_OUTPUT
+        echo "docs_result=${{ needs.documentation.result }}" >> $GITHUB_OUTPUT
+        echo "compatibility_result=${{ needs.compatibility-check.result }}" >> $GITHUB_OUTPUT
+        echo "build_result=${{ needs.build-verification.result }}" >> $GITHUB_OUTPUT
+        
+    - name: Generate quality report
+      run: |
+        echo "📊 CI Pipeline Quality Report"
+        echo "=============================="
+        echo "Build: #${{ github.run_number }}"
+        echo "Commit: ${{ github.sha }}"
+        echo "Branch: ${{ github.ref_name }}"
+        echo "Triggered by: ${{ github.event_name }}"
+        echo ""
+        echo "📋 Quality Gates Results:"
+        echo "  🧪 Tests: ${{ steps.results.outputs.test_result }}"
+        echo "  🔍 Code Quality: ${{ steps.results.outputs.quality_result }}"
+        echo "  🔒 Security: ${{ steps.results.outputs.security_result }}"
+        echo "  📚 Documentation: ${{ steps.results.outputs.docs_result }}"
+        echo "  🔄 Compatibility: ${{ steps.results.outputs.compatibility_result }}"
+        echo "  🔨 Build: ${{ steps.results.outputs.build_result }}"
+        echo ""
+        
+        # 计算整体状态
+        FAILED_GATES=""
+        if [[ "${{ steps.results.outputs.test_result }}" == "failure" ]]; then
+          FAILED_GATES="$FAILED_GATES Tests"
+        fi
+        if [[ "${{ steps.results.outputs.quality_result }}" == "failure" ]]; then
+          FAILED_GATES="$FAILED_GATES CodeQuality"
+        fi
+        if [[ "${{ steps.results.outputs.security_result }}" == "failure" ]]; then
+          FAILED_GATES="$FAILED_GATES Security"
+        fi
+        if [[ "${{ steps.results.outputs.docs_result }}" == "failure" ]]; then
+          FAILED_GATES="$FAILED_GATES Documentation"
+        fi
+        if [[ "${{ steps.results.outputs.compatibility_result }}" == "failure" ]]; then
+          FAILED_GATES="$FAILED_GATES Compatibility"
+        fi
+        if [[ "${{ steps.results.outputs.build_result }}" == "failure" ]]; then
+          FAILED_GATES="$FAILED_GATES Build"
+        fi
+        
+        if [[ -z "$FAILED_GATES" ]]; then
+          echo "✅ Overall Status: ALL QUALITY GATES PASSED"
+          echo "🚀 Ready for deployment!"
+        else
+          echo "❌ Overall Status: QUALITY GATES FAILED"
+          echo "Failed gates:$FAILED_GATES"
+          echo "🔧 Please review and fix the issues before proceeding"
+          exit 1
+        fi
+        
+    - name: Update commit status
+      if: github.event_name == 'push'
+      run: |
+        if [[ "${{ job.status }}" == "success" ]]; then
+          echo "✅ All quality gates passed - commit is ready for deployment"
+        else
+          echo "❌ Quality gates failed - commit requires fixes"
+        fi
